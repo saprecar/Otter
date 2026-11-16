@@ -38,6 +38,16 @@ except Exception:
     except Exception:
         UNITY_CAPTURE_AVAILABLE = False
 
+try:
+    from driver.linux_v4l2_bridge import LinuxV4L2Bridge
+    LINUX_V4L2_AVAILABLE = True
+except Exception:
+    try:
+        from Dev.desktop.driver.linux_v4l2_bridge import LinuxV4L2Bridge
+        LINUX_V4L2_AVAILABLE = True
+    except Exception:
+        LINUX_V4L2_AVAILABLE = False
+
 # [AI-BLOCK: Main CamBridge Receiver and Virtual Camera Feed]
 class CamBridgeReceiver:
     def __init__(self, host="127.0.0.1", stream_port=8089, control_port=8090, width=1280, height=720, fps=30, camera_name="Otter Camera 1", window_title=None):
@@ -80,6 +90,7 @@ class CamBridgeReceiver:
         # Virtual camera setup or OpenCV preview fallback
         vcam = None
         uc_bridge = None
+        v4l2_bridge = None
         if enable_virtualcam:
             if VIRTUAL_CAM_AVAILABLE:
                 try:
@@ -92,14 +103,23 @@ class CamBridgeReceiver:
                     except Exception as ex:
                         print(f"Virtual camera initialization notice: {ex}.")
 
-            # If pyvirtualcam is unavailable or failed, use standalone DirectShow shared memory driver
-            if vcam is None and UNITY_CAPTURE_AVAILABLE:
+            # Windows: Standalone DirectShow shared memory driver
+            if vcam is None and sys.platform.startswith("win") and UNITY_CAPTURE_AVAILABLE:
                 try:
                     uc_bridge = UnityCaptureSharedMemory(cap_num=0)
                     if uc_bridge.connect():
                         print("DirectShow Virtual Camera initialized: 'Unity Video Capture' (Standalone Driver active)")
                 except Exception as e:
                     print(f"Standalone DirectShow initialization notice: {e}")
+
+            # Linux: Native v4l2loopback loopback device
+            if vcam is None and sys.platform.startswith("linux") and LINUX_V4L2_AVAILABLE:
+                try:
+                    v4l2_bridge = LinuxV4L2Bridge(width=self.width, height=self.height, fps=self.fps)
+                    if v4l2_bridge.connect():
+                        print(f"Linux V4L2 Virtual Camera initialized on {v4l2_bridge.device}")
+                except Exception as e:
+                    print(f"Linux V4L2 initialization notice: {e}")
 
         # Demux packet stream (Length prefix + NAL payload)
         try:
@@ -129,6 +149,8 @@ class CamBridgeReceiver:
                         vcam.sleep_until_next_frame()
                     elif uc_bridge:
                         uc_bridge.send_frame(frame)
+                    elif v4l2_bridge:
+                        v4l2_bridge.send_frame(frame)
 
                     # Interactive PC control window
                     cv2.imshow(self.window_title, frame)
@@ -157,6 +179,8 @@ class CamBridgeReceiver:
                 vcam.close()
             if uc_bridge:
                 uc_bridge.close()
+            if v4l2_bridge:
+                v4l2_bridge.close()
             cv2.destroyAllWindows()
             print("CamBridge Receiver terminated cleanly.")
 
