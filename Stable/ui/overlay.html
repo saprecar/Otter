@@ -1,0 +1,126 @@
+<!-- [AI-BLOCK: Standalone Logcat Overlay Component] -->
+<div id="understory-debug-overlay" style="position: fixed; bottom: 20px; right: 20px; width: 440px; background: #0d1117; color: #c9d1d9; border: 1px solid #30363d; border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; z-index: 999999; box-shadow: 0 8px 24px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden;">
+
+  <!-- [AI-BLOCK: Draggable Header] -->
+  <div id="logcat-header" style="background: #238636; color: #ffffff; padding: 8px 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; cursor: grab; user-select: none;">
+    <span style="display: flex; align-items: center; gap: 6px;">
+      <span>●</span>
+      <span>System Logcat & Local Errors</span>
+    </span>
+    <div style="display: flex; gap: 10px; font-size: 14px; cursor: pointer;">
+      <span id="logcat-btn-min" title="Minimize" style="line-height: 1;">—</span>
+      <span id="logcat-btn-close" title="Close" style="line-height: 1;">✖</span>
+    </div>
+  </div>
+
+  <!-- [AI-BLOCK: Action Bar: Copy & Clear Controls] -->
+  <div style="background: #161b22; border-bottom: 1px solid #30363d; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center;">
+    <span style="font-size: 11px; color: #8b949e;">Auto-Sanitization: <strong style="color: #7ee787;">Active</strong></span>
+    <div style="display: flex; gap: 8px;">
+      <button id="logcat-btn-copy" style="background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">Copy Log</button>
+      <button id="logcat-btn-clear" style="background: #21262d; color: #f85149; border: 1px solid #30363d; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">Clear Log</button>
+    </div>
+  </div>
+
+  <!-- [AI-BLOCK: Scrollable Log Stream Container] -->
+  <div id="logcat-body" style="padding: 10px 12px; max-height: 220px; overflow-y: auto; background: #090d13; display: flex; flex-direction: column; gap: 4px;">
+    <div style="color: #8b949e;">[14:15:00] [SYSTEM] System log initialized. Ready.</div>
+    <div style="color: #7ee787;">[14:15:02] [LOCAL-SERVER] Ollama MCP connected at http://127.0.0.1:11434</div>
+    <div style="color: #d2a8ff;">[14:15:04] [SANITIZER] Masked user path: [USER_HOME]/repo/logs/app.log</div>
+    <div style="color: #f85149;">[14:15:05] [LOCAL-ERROR] Mock server timeout on port 8080 (intercepted)</div>
+  </div>
+</div>
+
+<script>
+// [AI-BLOCK: Sanitization Engine & UI Action Handlers]
+(function() {
+  const overlay = document.getElementById('understory-debug-overlay');
+  const body = document.getElementById('logcat-body');
+  const header = document.getElementById('logcat-header');
+  const btnMin = document.getElementById('logcat-btn-min');
+  const btnClose = document.getElementById('logcat-btn-close');
+  const btnCopy = document.getElementById('logcat-btn-copy');
+  const btnClear = document.getElementById('logcat-btn-clear');
+
+  // [AI-BLOCK: Auto-Sanitizer Function]
+  function sanitizeLog(text) {
+    if (!text) return text;
+    return text
+      .replace(/[A-Za-z]:\\[Uu]sers\\[^\\]+/gi, '[USER_HOME]')
+      .replace(/\/home\/[^\/]+/gi, '[USER_HOME]')
+      .replace(/\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g, (ip) => ip === '127.0.0.1' ? ip : '[IP_REDACTED]')
+      .replace(/(bearer|token|apikey|secret|password)\s*[:=]\s*[^\s,;]+/gi, '$1: [REDACTED]');
+  }
+
+  // [AI-BLOCK: Add Log Entry]
+  window.addLogcatEntry = function(type, message) {
+    if (!body) return;
+    const cleanMsg = sanitizeLog(message);
+    const row = document.createElement('div');
+    const time = new Date().toTimeString().split(' ')[0];
+    
+    let color = '#c9d1d9';
+    if (type === 'ERROR') color = '#f85149';
+    else if (type === 'WARN') color = '#e3b341';
+    else if (type === 'SERVER') color = '#7ee787';
+
+    row.style.color = color;
+    row.textContent = `[${time}] [${type}] ${cleanMsg}`;
+    body.appendChild(row);
+    body.scrollTop = body.scrollHeight;
+  };
+
+  // [AI-BLOCK: Copy Logs Handler]
+  btnCopy?.addEventListener('click', () => {
+    const rawText = body.innerText;
+    navigator.clipboard.writeText(rawText).then(() => {
+      const orig = btnCopy.textContent;
+      btnCopy.textContent = 'Copied!';
+      setTimeout(() => { btnCopy.textContent = orig; }, 1500);
+    });
+  });
+
+  // [AI-BLOCK: Clear Logs Handler]
+  btnClear?.addEventListener('click', () => {
+    body.innerHTML = '<div style="color: #8b949e;">[LOGS CLEARED]</div>';
+  });
+
+  // [AI-BLOCK: Minimize / Restore Handler]
+  let isMinimized = false;
+  btnMin?.addEventListener('click', () => {
+    isMinimized = !isMinimized;
+    body.style.display = isMinimized ? 'none' : 'flex';
+    document.querySelector('#understory-debug-overlay > div:nth-child(2)').style.display = isMinimized ? 'none' : 'flex';
+    btnMin.textContent = isMinimized ? '▢' : '—';
+  });
+
+  // [AI-BLOCK: Close Handler]
+  btnClose?.addEventListener('click', () => {
+    overlay.style.display = 'none';
+  });
+
+  // [AI-BLOCK: Draggable Header Logic]
+  let isDragging = false, startX, startY, origLeft, origTop;
+  header?.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = overlay.getBoundingClientRect();
+    origLeft = rect.left;
+    origTop = rect.top;
+    overlay.style.bottom = 'auto';
+    overlay.style.right = 'auto';
+    overlay.style.left = origLeft + 'px';
+    overlay.style.top = origTop + 'px';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    overlay.style.left = (origLeft + (e.clientX - startX)) + 'px';
+    overlay.style.top = (origTop + (e.clientY - startY)) + 'px';
+  });
+
+  window.addEventListener('mouseup', () => { isDragging = false; });
+})();
+</script>
+
