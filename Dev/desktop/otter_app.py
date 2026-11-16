@@ -752,7 +752,9 @@ class OtterApp:
 
     def _run_receiver(self, enable_vcam):
         try:
-            self.receiver.start_receiver(enable_virtualcam=enable_vcam)
+            # show_preview=False: cv2.imshow must only run on the main thread (Windows limitation)
+            # Virtual camera output still works headlessly via DirectShow shared memory
+            self.receiver.start_receiver(enable_virtualcam=enable_vcam, show_preview=False)
         except Exception as e:
             self.log(f"Receiver error: {e}")
         finally:

@@ -19,6 +19,7 @@ kernel32.OpenFileMappingA.restype = wintypes.HANDLE
 kernel32.OpenFileMappingA.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCSTR]
 kernel32.MapViewOfFile.restype = ctypes.c_void_p
 kernel32.MapViewOfFile.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, ctypes.c_size_t]
+kernel32.UnmapViewOfFile.restype = wintypes.BOOL
 kernel32.UnmapViewOfFile.argtypes = [ctypes.c_void_p]
 kernel32.CreateMutexA.restype = wintypes.HANDLE
 kernel32.CreateMutexA.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCSTR]

@@ -62,7 +62,7 @@ class CamBridgeReceiver:
         self.running = False
         self.controller = CamBridgeControl(host=self.host, port=self.control_port)
 
-    def start_receiver(self, enable_virtualcam=True):
+    def start_receiver(self, enable_virtualcam=True, show_preview=False):
         if not CV2_AVAILABLE or not NUMPY_AVAILABLE:
             print("Notice: 'opencv-python' or 'numpy' is not installed. Please install with: pip install -r requirements.txt")
             return
@@ -160,23 +160,24 @@ class CamBridgeReceiver:
                     elif v4l2_bridge:
                         v4l2_bridge.send_frame(frame)
 
-                    # Interactive PC control window
-                    cv2.imshow(self.window_title, frame)
-                    key = cv2.waitKey(1) & 0xFF
-                    if key == ord('q'):
-                        break
-                    elif key in (ord('+'), ord('=')):
-                        self.controller.zoom_in()
-                    elif key == ord('-'):
-                        self.controller.zoom_out()
-                    elif key == ord('c'):
-                        self.controller.switch_camera()
-                    elif key == ord(' '):
-                        info = self.controller.get_info()
-                        if info.get("isPaused", False):
-                            self.controller.resume()
-                        else:
-                            self.controller.pause()
+                    # Preview: only safe from main thread; skip in background thread mode
+                    if show_preview:
+                        cv2.imshow(self.window_title, frame)
+                        key = cv2.waitKey(1) & 0xFF
+                        if key == ord('q'):
+                            break
+                        elif key in (ord('+'), ord('=')):
+                            self.controller.zoom_in()
+                        elif key == ord('-'):
+                            self.controller.zoom_out()
+                        elif key == ord('c'):
+                            self.controller.switch_camera()
+                        elif key == ord(' '):
+                            info = self.controller.get_info()
+                            if info.get("isPaused", False):
+                                self.controller.resume()
+                            else:
+                                self.controller.pause()
 
         except Exception as e:
             print(f"Stream encountered event: {e}")
@@ -189,7 +190,8 @@ class CamBridgeReceiver:
                 uc_bridge.close()
             if v4l2_bridge:
                 v4l2_bridge.close()
-            cv2.destroyAllWindows()
+            if show_preview:
+                cv2.destroyAllWindows()
             print("CamBridge Receiver terminated cleanly.")
 
     def stop_receiver(self):
