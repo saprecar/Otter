@@ -134,22 +134,22 @@ Allows wireless streaming over your local network without any cables attached.
 1. Open OBS Studio.
 2. Under **Sources**, click `+` -> **Video Capture Device**.
 3. Create a new source named `Otter Camera`.
-4. Under **Device**, select `Otter Virtual Camera` (or `OBS Virtual Camera`).
+4. Under **Device**, select `Unity Video Capture` OR `OBS Virtual Camera` (both receive the live Otter stream simultaneously).
 5. Set Resolution/FPS Type to **Device Default** and click OK.
 
 ### Discord
 1. Open Discord Settings (gear icon) -> **Voice & Video**.
 2. Scroll to **Video Settings**.
-3. In the **Camera** dropdown, select `Otter Virtual Camera`.
+3. In the **Camera** dropdown, select `OBS Virtual Camera` or `Unity Video Capture`.
 4. Click **Test Video** to preview.
 
 ### Google Meet, Zoom & Microsoft Teams
 1. In meeting settings (or before entering a call), open **Settings** -> **Video** -> **Camera**.
-2. Select `Otter Virtual Camera`.
+2. Select `OBS Virtual Camera` or `Unity Video Capture`.
 
 ### Web Browsers (Brave, Chrome, Firefox)
 1. Go to `chrome://settings/content/camera` (or `brave://settings/content/camera`).
-2. Set default camera to `Otter Virtual Camera`.
+2. Set default camera to `OBS Virtual Camera` or `Unity Video Capture`.
 
 ---
 

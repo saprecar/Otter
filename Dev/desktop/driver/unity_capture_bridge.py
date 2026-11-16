@@ -96,27 +96,28 @@ class UnityCaptureSharedMemory:
         self.is_connected = True
         return True
 
-    def send_frame(self, frame_bgr: np.ndarray, timeout_ms: int = 1000) -> bool:
+    def send_frame(self, frame_bgr: np.ndarray, timeout_ms: int = 2000) -> bool:
         """
         Write frame directly into Windows DirectShow shared memory buffer.
         Accepts BGR frame (standard OpenCV format).
+        Converts to RGBA and sets stride = width (pixel stride).
         """
         if not self.is_connected or not self.p_buf:
             if not self.connect():
                 return False
 
         h, w = frame_bgr.shape[:2]
-        stride = w * 4  # RGBA / BGRA 4 bytes per pixel
+        # In UnityCapture, stride is row stride in PIXELS (not bytes)
+        stride = w
 
-        # Convert BGR to BGRA
+        # Convert BGR to RGBA (FORMAT_UINT8 in UnityCapture is 8-bit RGBA)
         if frame_bgr.shape[2] == 3:
-            frame_bgra = np.empty((h, w, 4), dtype=np.uint8)
-            frame_bgra[:, :, :3] = frame_bgr
-            frame_bgra[:, :, 3] = 255
+            import cv2
+            frame_rgba = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGBA)
         else:
-            frame_bgra = frame_bgr
+            frame_rgba = frame_bgr
 
-        data_bytes = frame_bgra.tobytes()
+        data_bytes = frame_rgba.tobytes()
         data_len = len(data_bytes)
 
         # Header packing (32 bytes):
@@ -129,7 +130,7 @@ class UnityCaptureSharedMemory:
             w,
             h,
             stride,
-            0, # FORMAT_UINT8
+            0, # FORMAT_UINT8 (RGBA)
             1, # RESIZEMODE_LINEAR
             0, # MIRRORMODE_DISABLED
             timeout_ms
@@ -140,7 +141,7 @@ class UnityCaptureSharedMemory:
         try:
             # Write header
             ctypes.memmove(self.p_buf, header, len(header))
-            # Write pixel data right after header
+            # Write pixel data right after header (offset 32)
             ctypes.memmove(self.p_buf + len(header), data_bytes, data_len)
         finally:
             kernel32.ReleaseMutex(self.h_mutex)

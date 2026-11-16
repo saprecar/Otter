@@ -107,3 +107,9 @@
 
 
 
+
+## 2026-11-17 02:10:00 IST (UTC+05:30)
+- Implemented native OBS Virtual Camera shared memory fallback bridge (`Dev/desktop/driver/obs_virtualcam_bridge.py`) writing directly to `OBSVirtualCamVideo` IPC ring buffer in NV12 format.
+- Resolved UnityCapture DirectShow green diagnostic screen bug (`Dev/desktop/driver/unity_capture_bridge.py`) by correcting row stride from byte pitch to pixel width (`stride = w`), converting frames to true RGBA (`FORMAT_UINT8 = 0`), and setting persist timeout.
+- Enabled dual-output in `cambridge_receiver.py` so incoming Android frames broadcast simultaneously to both 'Unity Video Capture' and 'OBS Virtual Camera' without driver conflicts.
+- Updated documentation and in-app instructions (`USER_GUIDE.md`, `otter_app.py`) to guide users on selecting either virtual device.

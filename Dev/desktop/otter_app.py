@@ -284,7 +284,7 @@ class OtterApp:
             "2. Under the 'Sources' dock at the bottom, click the '+' (Add) button.",
             "3. Select 'Video Capture Device' from the menu.",
             "4. Choose 'Create New' and name it 'Otter Camera'.",
-            "5. Under 'Device', select 'Otter Virtual Camera' (or 'OBS Virtual Camera').",
+            "5. Under 'Device', select 'Unity Video Capture' OR 'OBS Virtual Camera'.",
             "6. Set Resolution/FPS Type to 'Device Default' and click OK.",
             "7. Your Android phone camera now feeds directly into OBS scenes."
         ])
@@ -293,7 +293,7 @@ class OtterApp:
             "1. Open Discord and click the Settings gear icon next to your username.",
             "2. In the left navigation sidebar, select 'Voice & Video'.",
             "3. Scroll down to the 'Video Settings' section.",
-            "4. In the 'Camera' dropdown, choose 'Otter Virtual Camera'.",
+            "4. In the 'Camera' dropdown, choose 'OBS Virtual Camera' or 'Unity Video Capture'.",
             "5. Click the 'Test Video' preview button to verify the feed.",
             "6. Join any voice channel or direct call and turn on your camera."
         ])
@@ -301,13 +301,13 @@ class OtterApp:
         add_card(scrollable_frame, "How to use with Google Meet, Zoom & MS Teams", [
             "1. Open meeting settings or join a test room.",
             "2. In the audio/video selection panel, navigate to 'Camera'.",
-            "3. Select 'Otter Virtual Camera' from the list of available devices.",
+            "3. Select 'OBS Virtual Camera' or 'Unity Video Capture' from the list of available devices.",
             "4. The HD stream from your phone camera is now your active video."
         ])
 
         add_card(scrollable_frame, "Web Browser Settings (Brave, Chrome, Firefox)", [
             "1. In Brave/Chrome, navigate to: brave://settings/content/camera (or chrome://settings/content/camera).",
-            "2. Select 'Otter Virtual Camera' as the preferred video input.",
+            "2. Select 'OBS Virtual Camera' or 'Unity Video Capture' as the preferred video input.",
             "3. Web apps (webcam tests, browser calls) will automatically use Otter."
         ])
 

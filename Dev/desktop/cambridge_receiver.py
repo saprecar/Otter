@@ -39,6 +39,16 @@ except Exception:
         UNITY_CAPTURE_AVAILABLE = False
 
 try:
+    from driver.obs_virtualcam_bridge import OBSVirtualCamBridge
+    OBS_VIRTUALCAM_AVAILABLE = True
+except Exception:
+    try:
+        from Dev.desktop.driver.obs_virtualcam_bridge import OBSVirtualCamBridge
+        OBS_VIRTUALCAM_AVAILABLE = True
+    except Exception:
+        OBS_VIRTUALCAM_AVAILABLE = False
+
+try:
     from driver.linux_v4l2_bridge import LinuxV4L2Bridge
     LINUX_V4L2_AVAILABLE = True
 except Exception:
@@ -90,28 +100,38 @@ class CamBridgeReceiver:
         # Virtual camera setup or OpenCV preview fallback
         vcam = None
         uc_bridge = None
+        obs_bridge = None
         v4l2_bridge = None
         if enable_virtualcam:
-            # Windows: Standalone DirectShow shared memory driver (Priority 1)
+            # Windows: Option B - Standalone DirectShow shared memory driver
             if sys.platform.startswith("win") and UNITY_CAPTURE_AVAILABLE:
                 try:
                     uc_bridge = UnityCaptureSharedMemory(cap_num=0)
                     if uc_bridge.connect():
-                        print("DirectShow Virtual Camera initialized: 'Unity Video Capture' (Standalone Driver active)")
+                        print("DirectShow Virtual Camera active: 'Unity Video Capture'")
                 except Exception as e:
-                    print(f"Standalone DirectShow initialization notice: {e}")
+                    print(f"DirectShow initialization notice: {e}")
 
-            # Linux: Native v4l2loopback loopback device (Priority 1 on Linux)
-            elif sys.platform.startswith("linux") and V4L2_LOOPBACK_AVAILABLE:
+            # Windows: Option A - Official OBS Virtual Camera Fallback (Universal)
+            if sys.platform.startswith("win") and OBS_VIRTUALCAM_AVAILABLE:
+                try:
+                    obs_bridge = OBSVirtualCamBridge(width=self.width, height=self.height, fps=self.fps)
+                    if obs_bridge.connect():
+                        print("OBS Virtual Camera Fallback active: 'OBS Virtual Camera'")
+                except Exception as e:
+                    print(f"OBS Virtual Camera initialization notice: {e}")
+
+            # Linux: Native v4l2loopback loopback device
+            elif sys.platform.startswith("linux") and LINUX_V4L2_AVAILABLE:
                 try:
                     v4l2_bridge = LinuxV4L2Bridge(width=self.width, height=self.height, fps=self.fps)
                     if v4l2_bridge.connect():
-                        print(f"Linux V4L2 Virtual Camera initialized on {v4l2_bridge.device_path}")
+                        print(f"Linux V4L2 Virtual Camera active on {v4l2_bridge.device_path}")
                 except Exception as e:
                     print(f"Linux V4L2 initialization notice: {e}")
 
             # Fallback to pyvirtualcam if available
-            if uc_bridge is None and v4l2_bridge is None and VIRTUAL_CAM_AVAILABLE:
+            if uc_bridge is None and obs_bridge is None and v4l2_bridge is None and VIRTUAL_CAM_AVAILABLE:
                 try:
                     vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR, device=self.camera_name)
                     print(f"Virtual Camera initialized: {vcam.device}")
@@ -121,13 +141,6 @@ class CamBridgeReceiver:
                         print(f"Virtual Camera initialized (default device): {vcam.device}")
                     except Exception as ex:
                         print(f"Virtual camera initialization notice: {ex}.")
-            if vcam is None and sys.platform.startswith("linux") and LINUX_V4L2_AVAILABLE:
-                try:
-                    v4l2_bridge = LinuxV4L2Bridge(width=self.width, height=self.height, fps=self.fps)
-                    if v4l2_bridge.connect():
-                        print(f"Linux V4L2 Virtual Camera initialized on {v4l2_bridge.device}")
-                except Exception as e:
-                    print(f"Linux V4L2 initialization notice: {e}")
 
         # Demux packet stream (Length prefix + NAL payload)
         try:
@@ -152,13 +165,15 @@ class CamBridgeReceiver:
                     if frame.shape[1] != self.width or frame.shape[0] != self.height:
                         frame = cv2.resize(frame, (self.width, self.height))
 
+                    if uc_bridge:
+                        uc_bridge.send_frame(frame)
+                    if obs_bridge:
+                        obs_bridge.send_frame(frame)
+                    if v4l2_bridge:
+                        v4l2_bridge.send_frame(frame)
                     if vcam:
                         vcam.send(frame)
                         vcam.sleep_until_next_frame()
-                    elif uc_bridge:
-                        uc_bridge.send_frame(frame)
-                    elif v4l2_bridge:
-                        v4l2_bridge.send_frame(frame)
 
                     # Preview: only safe from main thread; skip in background thread mode
                     if show_preview:
@@ -188,6 +203,8 @@ class CamBridgeReceiver:
                 vcam.close()
             if uc_bridge:
                 uc_bridge.close()
+            if obs_bridge:
+                obs_bridge.close()
             if v4l2_bridge:
                 v4l2_bridge.close()
             if show_preview:
