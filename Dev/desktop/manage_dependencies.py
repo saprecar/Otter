@@ -27,29 +27,47 @@ def check_dependencies():
             status[pkg_name] = False
     return status
 
-def install_dependencies(auto_confirm=False):
-    print(DISCLAIMER)
-    if not auto_confirm:
-        resp = input("\nDo you accept and wish to proceed with installation? [y/N]: ").strip().lower()
-        if resp not in ["y", "yes"]:
-            print("Installation cancelled by user.")
-            return False
+def install_dependencies(auto_confirm=False, log_callback=None):
+    if log_callback:
+        log_callback("Checking required core dependencies (opencv-python, numpy)...")
 
-    req_file = os.path.join(os.path.dirname(__file__), "requirements.txt")
-    cmd = [sys.executable, "-m", "pip", "install"]
-    if os.path.exists(req_file):
-        cmd.extend(["-r", req_file])
-    else:
-        cmd.extend(PACKAGES)
+    # Step 1: Install core dependencies (opencv-python, numpy)
+    core_pkgs = ["opencv-python>=4.8.0", "numpy>=1.24.0"]
+    cmd_core = [sys.executable, "-m", "pip", "install"] + core_pkgs
+    if log_callback:
+        log_callback(f"Installing core packages: {' '.join(cmd_core)}")
+    print(f"\nExecuting: {' '.join(cmd_core)}")
+    res_core = subprocess.run(cmd_core)
+    core_success = (res_core.returncode == 0)
 
-    print(f"\nExecuting: {' '.join(cmd)}")
-    result = subprocess.run(cmd)
-    if result.returncode == 0:
+    # Step 2: Attempt optional pyvirtualcam (pre-compiled binary only to prevent C++ compiler crash)
+    if log_callback:
+        log_callback("Checking pyvirtualcam virtual camera driver availability...")
+    cmd_vcam = [sys.executable, "-m", "pip", "install", "--only-binary", ":all:", "pyvirtualcam>=0.11.0"]
+    print(f"\nExecuting: {' '.join(cmd_vcam)}")
+    res_vcam = subprocess.run(cmd_vcam)
+
+    if core_success and res_vcam.returncode == 0:
+        if log_callback:
+            log_callback("All dependencies (including Virtual Camera driver) installed successfully!")
         print("\nAll dependencies installed successfully.")
-        return True
+        return True, "All dependencies (including pyvirtualcam) installed successfully."
+    elif core_success:
+        msg = (
+            "Core video streaming packages (OpenCV, NumPy) installed successfully!\n\n"
+            "Notice: Pre-compiled binary wheel for 'pyvirtualcam' is not yet available for your Python version. "
+            "Otter will run in direct OpenCV Window Preview mode (can be captured in OBS via Window Capture). "
+            "To use virtual webcam device, install Python 3.10 - 3.14."
+        )
+        if log_callback:
+            log_callback("Core video packages ready. pyvirtualcam optional (OpenCV window preview active).")
+        print("\nCore packages installed. Virtual camera optional fallback active.")
+        return True, msg
     else:
-        print("\nInstallation encountered errors. Please check your internet connection or install manually.")
-        return False
+        err = "Failed to install core Python packages. Please verify your internet connection or install manually."
+        if log_callback:
+            log_callback(err)
+        return False, err
 
 def uninstall_dependencies(auto_confirm=False):
     print(DISCLAIMER)

@@ -54,3 +54,11 @@ desktop.ini
 # Prohibited confidential directories
 Statement/
 requirement/Propose/
+
+# AI Agent internal instructions and configurations
+.agent/
+.agents/
+.claude/
+.github/
+install_agent_skills.bat
+

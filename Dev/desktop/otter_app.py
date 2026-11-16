@@ -462,18 +462,18 @@ class OtterApp:
 
         self.log("Starting automated package installation via pip...")
         def worker():
-            success = manage_dependencies.install_dependencies(auto_confirm=True)
-            self.root.after(0, lambda: self._on_install_completed(success))
+            success, msg = manage_dependencies.install_dependencies(auto_confirm=True, log_callback=self.log)
+            self.root.after(0, lambda: self._on_install_completed(success, msg))
         threading.Thread(target=worker, daemon=True).start()
 
-    def _on_install_completed(self, success):
+    def _on_install_completed(self, success, msg):
         self._refresh_dep_status_labels()
         if success:
-            self.log("Dependencies installed successfully.")
-            messagebox.showinfo("Success", "All Python dependencies installed successfully.")
+            self.log(f"Dependency setup finished: {msg}")
+            messagebox.showinfo("Dependencies Ready", msg)
         else:
-            self.log("Dependency installation encountered issues.")
-            messagebox.showwarning("Notice", "Installation finished with warnings. Review terminal or install manually.")
+            self.log(f"Dependency installation error: {msg}")
+            messagebox.showwarning("Notice", msg)
 
     def _gui_uninstall_deps(self):
         if not messagebox.askyesno("Confirm Uninstall", "Are you sure you want to uninstall Otter dependencies (opencv-python, numpy, pyvirtualcam)?"):
