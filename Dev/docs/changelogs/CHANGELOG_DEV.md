@@ -120,3 +120,16 @@
 - Added Android 14+ Native USB Webcam control card and ADB trigger (`svc usb setFunctions uvc`) in Tab 3 of `otter_app.py` for Google Pixel, Motorola, and supported devices.
 - Added graceful OEM detection informing users when manufacturers (such as Vivo/iQOO) have stripped native UVC kernel drivers, automatically utilizing Otter's high-speed ADB tunnel instead.
 - Updated `requirements.txt` and `manage_dependencies.py` to include `imageio-ffmpeg`.
+
+## 2026-11-17 02:51:30 IST (UTC+05:30)
+- Fixed H.264 stream decoding and size mismatch in `cambridge_receiver.py`:
+  - Added `-vf scale={width}:{height}` to FFmpeg pipeline to guarantee exact output dimensions matching the PC virtual camera canvas regardless of phone sensor aspect ratio or orientation.
+  - Replaced partial `pipe.read()` with an exact byte-accumulation loop (`_read_exact`) ensuring zero dropped chunks and continuous full-frame decoding.
+  - Set `stderr=None` in subprocess call to surface any FFmpeg warnings and stream diagnostics directly in the console.
+  - Implemented real-time `on_frame` direct dispatching to both `Unity Video Capture` and `OBS Virtual Camera` with live dispatch logging.
+
+## 2026-11-17 02:58:30 IST (UTC+05:30)
+- Fixed `c0000094` divide-by-zero crash in `obs-virtualcam-module64.dll`:
+  - Replaced manual `struct.pack` in `obs_virtualcam_bridge.py` with native C `QueueHeader` ctypes structure matching MSVC 64-bit alignment.
+  - Fixed 4-byte padding offset before `uint64_t interval`, ensuring `interval` is placed at offset 40 (`333333` for 30 FPS) instead of offset 36. This prevents `obs-virtualcam-module64.dll` from reading `interval = 0` during DirectShow device enumeration.
+  - Set queue header `state = SHARED_QUEUE_STATE_STOPPING` on receiver termination to cleanly detach shared memory.

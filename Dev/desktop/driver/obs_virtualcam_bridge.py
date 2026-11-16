@@ -20,6 +20,19 @@ SHARED_QUEUE_STATE_READY = 2
 SHARED_QUEUE_STATE_STOPPING = 3
 FRAME_HEADER_SIZE = 32
 
+class QueueHeader(ctypes.Structure):
+    _fields_ = [
+        ("write_idx", ctypes.c_uint32),
+        ("read_idx", ctypes.c_uint32),
+        ("state", ctypes.c_uint32),
+        ("offsets", ctypes.c_uint32 * 3),
+        ("type", ctypes.c_uint32),
+        ("cx", ctypes.c_uint32),
+        ("cy", ctypes.c_uint32),
+        ("interval", ctypes.c_uint64),
+        ("reserved", ctypes.c_uint32 * 8),
+    ]
+
 kernel32 = ctypes.windll.kernel32
 kernel32.CreateFileMappingW.restype = wintypes.HANDLE
 kernel32.CreateFileMappingW.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, wintypes.LPCWSTR]
@@ -53,8 +66,8 @@ class OBSVirtualCamBridge:
 
     def connect(self) -> bool:
         """Create or open the OBSVirtualCamVideo memory-mapped file queue"""
-        # Calculate queue layout matching OBS shared-memory-queue.c
-        header_size = _align32(76)  # sizeof(struct queue_header)
+        # Calculate queue layout matching OBS shared-memory-queue.c (aligned to 32 bytes)
+        header_size = _align32(ctypes.sizeof(QueueHeader))  # 96 bytes
         size = header_size
         for i in range(3):
             self.offsets[i] = size
@@ -81,29 +94,21 @@ class OBSVirtualCamBridge:
             self.close()
             return False
 
-        # Pack header:
-        # volatile uint32_t write_idx (0)
-        # volatile uint32_t read_idx (0)
-        # volatile uint32_t state (SHARED_QUEUE_STATE_STARTING = 1)
-        # uint32_t offsets[3]
-        # uint32_t type (0)
-        # uint32_t cx
-        # uint32_t cy
-        # uint64_t interval
-        # uint32_t reserved[8]
-        header = struct.pack(
-            "<III3IIIIQ8I",
-            0, # write_idx
-            0, # read_idx
-            SHARED_QUEUE_STATE_STARTING, # state
-            self.offsets[0], self.offsets[1], self.offsets[2],
-            0, # type: SHARED_QUEUE_TYPE_VIDEO
-            self.width,
-            self.height,
-            self.interval,
-            0, 0, 0, 0, 0, 0, 0, 0
-        )
-        ctypes.memmove(self.p_buf, header, len(header))
+        # Initialize header with exact C-aligned QueueHeader struct
+        hdr = QueueHeader.from_address(self.p_buf)
+        hdr.write_idx = 0
+        hdr.read_idx = 0
+        hdr.state = SHARED_QUEUE_STATE_STARTING
+        hdr.offsets[0] = self.offsets[0]
+        hdr.offsets[1] = self.offsets[1]
+        hdr.offsets[2] = self.offsets[2]
+        hdr.type = 0 # SHARED_QUEUE_TYPE_VIDEO
+        hdr.cx = self.width
+        hdr.cy = self.height
+        hdr.interval = self.interval
+        for i in range(8):
+            hdr.reserved[i] = 0
+
         self.is_connected = True
         return True
 
@@ -149,20 +154,18 @@ class OBSVirtualCamBridge:
         ctypes.memmove(self.p_buf + slot_offset + FRAME_HEADER_SIZE, nv12_bytes, len(nv12_bytes))
 
         # Update write_idx, read_idx, and state in queue_header
-        # write_idx is at offset 0 (uint32)
-        # read_idx is at offset 4 (uint32)
-        # state is at offset 8 (uint32)
-        indices_state = struct.pack("<III", self.write_idx, self.write_idx, SHARED_QUEUE_STATE_READY)
-        ctypes.memmove(self.p_buf, indices_state, len(indices_state))
+        hdr = QueueHeader.from_address(self.p_buf)
+        hdr.write_idx = self.write_idx
+        hdr.read_idx = self.write_idx
+        hdr.state = SHARED_QUEUE_STATE_READY
 
         return True
 
     def close(self):
         if self.p_buf:
-            # Mark queue stopping before detaching
             try:
-                stop_state = struct.pack("<I", SHARED_QUEUE_STATE_STOPPING)
-                ctypes.memmove(self.p_buf + 8, stop_state, 4)
+                hdr = QueueHeader.from_address(self.p_buf)
+                hdr.state = SHARED_QUEUE_STATE_STOPPING
             except Exception:
                 pass
             kernel32.UnmapViewOfFile(self.p_buf)

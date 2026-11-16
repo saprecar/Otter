@@ -65,10 +65,11 @@ class H264DecoderPipe:
     Decodes incoming raw H.264 NAL units (from Android MediaCodec) using standalone static FFmpeg.
     Outputs uncompressed BGR frames without needing pyvirtualcam or C++ compilation.
     """
-    def __init__(self, width=1280, height=720):
+    def __init__(self, width=1280, height=720, on_frame=None):
         self.width = width
         self.height = height
         self.frame_size = width * height * 3
+        self.on_frame = on_frame
         self.proc = None
         self.running = False
         self.latest_frame = None
@@ -86,12 +87,12 @@ class H264DecoderPipe:
 
         cmd = [
             ffmpeg_exe,
-            "-loglevel", "error",
+            "-loglevel", "warning",
             "-f", "h264",
             "-i", "pipe:0",
+            "-vf", f"scale={self.width}:{self.height}",
             "-f", "rawvideo",
             "-pix_fmt", "bgr24",
-            "-vsync", "0",
             "pipe:1"
         ]
         try:
@@ -99,8 +100,8 @@ class H264DecoderPipe:
                 cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                bufsize=10**7
+                stderr=None,
+                bufsize=0
             )
             self.running = True
             self.reader_thread = threading.Thread(target=self._reader_loop, daemon=True)
@@ -109,17 +110,31 @@ class H264DecoderPipe:
             print(f"H.264 FFmpeg decoder init notice: {e}")
             self.proc = None
 
+    def _read_exact(self, n):
+        buf = bytearray()
+        while len(buf) < n and self.running:
+            try:
+                chunk = self.proc.stdout.read(min(n - len(buf), 65536))
+                if not chunk:
+                    return None
+                buf.extend(chunk)
+            except Exception:
+                return None
+        return bytes(buf)
+
     def _reader_loop(self):
         while self.running and self.proc and self.proc.stdout:
-            try:
-                raw_bytes = self.proc.stdout.read(self.frame_size)
-                if len(raw_bytes) == self.frame_size:
-                    frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((self.height, self.width, 3))
-                    with self.lock:
-                        self.latest_frame = frame
-                elif len(raw_bytes) == 0:
-                    break
-            except Exception:
+            raw_bytes = self._read_exact(self.frame_size)
+            if raw_bytes and len(raw_bytes) == self.frame_size:
+                frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((self.height, self.width, 3))
+                with self.lock:
+                    self.latest_frame = frame
+                if self.on_frame:
+                    try:
+                        self.on_frame(frame)
+                    except Exception:
+                        pass
+            elif not self.running:
                 break
 
     def push_packet(self, data: bytes):
@@ -233,8 +248,31 @@ class CamBridgeReceiver:
                     except Exception as ex:
                         print(f"Virtual camera initialization notice: {ex}.")
 
-        # Real-time H.264 stream decoder pipe
-        decoder = H264DecoderPipe(width=self.width, height=self.height)
+        self.dispatched_count = 0
+        def dispatch_frame(frame):
+            if frame is None:
+                return
+            if frame.shape[1] != self.width or frame.shape[0] != self.height:
+                frame = cv2.resize(frame, (self.width, self.height))
+
+            if uc_bridge:
+                uc_bridge.send_frame(frame)
+            if obs_bridge:
+                obs_bridge.send_frame(frame)
+            if v4l2_bridge:
+                v4l2_bridge.send_frame(frame)
+            if vcam:
+                vcam.send(frame)
+                vcam.sleep_until_next_frame()
+
+            self.dispatched_count += 1
+            if self.dispatched_count == 1:
+                print(f"Streaming live video: First frame received and dispatched ({self.width}x{self.height}).")
+            elif self.dispatched_count % 150 == 0:
+                print(f"Streaming live video: Dispatched {self.dispatched_count} frames to virtual cameras.")
+
+        # Real-time H.264 stream decoder pipe with auto-scaling and direct frame dispatch
+        decoder = H264DecoderPipe(width=self.width, height=self.height, on_frame=dispatch_frame)
 
         # Demux packet stream (Length prefix + NAL payload)
         try:
@@ -250,34 +288,20 @@ class CamBridgeReceiver:
                 if not packet_data:
                     break
 
-                frame = None
-                # Check for standard JPEG packet
+                # Check for standard JPEG packet fallback
                 if packet_data.startswith(b'\xff\xd8'):
                     nparr = np.frombuffer(packet_data, np.uint8)
                     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                    dispatch_frame(frame)
                 else:
                     # Raw H.264 NAL packet from Android MediaCodec
                     decoder.push_packet(packet_data)
-                    frame = decoder.get_latest_frame()
 
-                if frame is not None:
-                    # Resize to match standard virtual camera canvas if needed
-                    if frame.shape[1] != self.width or frame.shape[0] != self.height:
-                        frame = cv2.resize(frame, (self.width, self.height))
-
-                    if uc_bridge:
-                        uc_bridge.send_frame(frame)
-                    if obs_bridge:
-                        obs_bridge.send_frame(frame)
-                    if v4l2_bridge:
-                        v4l2_bridge.send_frame(frame)
-                    if vcam:
-                        vcam.send(frame)
-                        vcam.sleep_until_next_frame()
-
-                    # Preview: only safe from main thread; skip in background thread mode
-                    if show_preview:
-                        cv2.imshow(self.window_title, frame)
+                # Preview: only safe from main thread; skip in background thread mode
+                if show_preview:
+                    preview_frame = decoder.get_latest_frame()
+                    if preview_frame is not None:
+                        cv2.imshow(self.window_title, preview_frame)
                         key = cv2.waitKey(1) & 0xFF
                         if key == ord('q'):
                             break
