@@ -117,6 +117,7 @@ public class MainActivity extends Activity {
     private ServerSocket videoServerSocket;
     private Socket activeVideoClient;
     private OutputStream videoOutputStream;
+    private volatile byte[] cachedSpsPps = null;
 
     private ServerSocket controlServerSocket;
     private float currentZoom = 1.0f;
@@ -703,6 +704,7 @@ public class MainActivity extends Activity {
     // [AI-BLOCK: Hardware H.264 Encoder]
     private synchronized void setupEncoder(int width, int height) throws Exception {
         stopEncoder();
+        cachedSpsPps = null;
         MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
         format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         format.setInteger(MediaFormat.KEY_BIT_RATE, 4000000); // 4 Mbps
@@ -747,6 +749,9 @@ public class MainActivity extends Activity {
                     if (outputBuffer != null && bufferInfo.size > 0) {
                         byte[] outData = new byte[bufferInfo.size];
                         outputBuffer.get(outData);
+                        if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
+                            cachedSpsPps = outData;
+                        }
                         sendVideoPacket(outData);
                     }
                     codec.releaseOutputBuffer(outputBufferIndex, false);
@@ -772,6 +777,18 @@ public class MainActivity extends Activity {
                         }
                         activeVideoClient = client;
                         videoOutputStream = client.getOutputStream();
+                        // Immediately dispatch cached SPS/PPS header so receiver initializes without delay
+                        if (cachedSpsPps != null) {
+                            sendVideoPacket(cachedSpsPps);
+                        }
+                        // Request immediate IDR keyframe from hardware encoder for fresh client
+                        if (mediaCodec != null) {
+                            try {
+                                Bundle syncBundle = new Bundle();
+                                syncBundle.putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0);
+                                mediaCodec.setParameters(syncBundle);
+                            } catch (Exception ignored) {}
+                        }
                     }
                     runOnUiThread(() -> statusText.setText("Otter: PC Connected"));
                 }
