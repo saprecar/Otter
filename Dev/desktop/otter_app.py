@@ -529,7 +529,7 @@ class OtterApp:
     def _gui_install_deps(self):
         disclaimer = (
             "DISCLAIMER & LIABILITY NOTICE:\n\n"
-            "Automated package installation runs standard pip commands targeting official PyPI packages (opencv-python, numpy, pyvirtualcam).\n\n"
+            "Automated package installation runs standard pip commands targeting official PyPI packages (opencv-python, numpy).\n\n"
             "The scripts are provided 'AS IS' without warranty of any kind. Neither developer 'spacecar' nor Otter is responsible for any system breaks, package conflicts, or environment issues.\n\n"
             "Do you accept and wish to proceed?"
         )
@@ -552,7 +552,7 @@ class OtterApp:
             messagebox.showwarning("Notice", msg)
 
     def _gui_uninstall_deps(self):
-        if not messagebox.askyesno("Confirm Uninstall", "Are you sure you want to uninstall Otter dependencies (opencv-python, numpy, pyvirtualcam)?"):
+        if not messagebox.askyesno("Confirm Uninstall", "Are you sure you want to uninstall Otter dependencies (opencv-python, numpy)?"):
             return
 
         self.log("Uninstalling Otter dependencies...")
@@ -573,9 +573,9 @@ class OtterApp:
             "2. Run:\n\n"
             "pip install -r Dev/desktop/requirements.txt\n\n"
             "OR install individually:\n"
-            "pip install opencv-python numpy pyvirtualcam\n\n"
+            "pip install opencv-python numpy\n\n"
             "To uninstall later:\n"
-            "pip uninstall -y opencv-python numpy pyvirtualcam"
+            "pip uninstall -y opencv-python numpy"
         )
         messagebox.showinfo("Manual Instructions", msg)
 

@@ -6,7 +6,7 @@ DISCLAIMER = (
     "====================================================================\n"
     "DISCLAIMER & LIABILITY NOTICE:\n"
     "Automated package management runs standard pip commands targeting official\n"
-    "PyPI packages (opencv-python, numpy, pyvirtualcam).\n"
+    "PyPI packages (opencv-python, numpy).\n"
     "The software and scripts are provided 'AS IS', WITHOUT WARRANTY OF ANY\n"
     "KIND. Neither the developer ('spacecar') nor Otter is responsible for\n"
     "any system breaks, environment corruption, dependency conflicts, or data loss.\n"
@@ -14,12 +14,12 @@ DISCLAIMER = (
     "===================================================================="
 )
 
-PACKAGES = ["opencv-python>=4.8.0", "numpy>=1.24.0", "pyvirtualcam>=0.11.0"]
-PACKAGE_NAMES = ["opencv-python", "numpy", "pyvirtualcam"]
+PACKAGES = ["opencv-python>=4.8.0", "numpy>=1.24.0"]
+PACKAGE_NAMES = ["opencv-python", "numpy"]
 
 def check_dependencies():
     status = {}
-    for mod_name, pkg_name in [("cv2", "opencv-python"), ("numpy", "numpy"), ("pyvirtualcam", "pyvirtualcam")]:
+    for mod_name, pkg_name in [("cv2", "opencv-python"), ("numpy", "numpy")]:
         try:
             __import__(mod_name)
             status[pkg_name] = True
@@ -29,42 +29,21 @@ def check_dependencies():
 
 def install_dependencies(auto_confirm=False, log_callback=None):
     if log_callback:
-        log_callback("Checking required core dependencies (opencv-python, numpy)...")
+        log_callback("Installing required Python packages (opencv-python, numpy)...")
 
-    # Step 1: Install core dependencies (opencv-python, numpy)
-    core_pkgs = ["opencv-python>=4.8.0", "numpy>=1.24.0"]
-    cmd_core = [sys.executable, "-m", "pip", "install"] + core_pkgs
+    cmd = [sys.executable, "-m", "pip", "install"] + PACKAGES
     if log_callback:
-        log_callback(f"Installing core packages: {' '.join(cmd_core)}")
-    print(f"\nExecuting: {' '.join(cmd_core)}")
-    res_core = subprocess.run(cmd_core)
-    core_success = (res_core.returncode == 0)
+        log_callback(f"Executing: {' '.join(cmd)}")
+    print(f"\nExecuting: {' '.join(cmd)}")
+    res = subprocess.run(cmd)
 
-    # Step 2: Attempt optional pyvirtualcam (pre-compiled binary only to prevent C++ compiler crash)
-    if log_callback:
-        log_callback("Checking pyvirtualcam virtual camera driver availability...")
-    cmd_vcam = [sys.executable, "-m", "pip", "install", "--only-binary", ":all:", "pyvirtualcam>=0.11.0"]
-    print(f"\nExecuting: {' '.join(cmd_vcam)}")
-    res_vcam = subprocess.run(cmd_vcam)
-
-    if core_success and res_vcam.returncode == 0:
+    if res.returncode == 0:
+        msg = "All required Python dependencies (opencv-python, numpy) are installed and ready!"
         if log_callback:
-            log_callback("All dependencies (including Virtual Camera driver) installed successfully!")
-        print("\nAll dependencies installed successfully.")
-        return True, "All dependencies (including pyvirtualcam) installed successfully."
-    elif core_success:
-        msg = (
-            "Core video streaming packages (OpenCV, NumPy) installed successfully!\n\n"
-            "Notice: Pre-compiled binary wheel for 'pyvirtualcam' is not yet available for your Python version. "
-            "Otter will run in direct OpenCV Window Preview mode (can be captured in OBS via Window Capture). "
-            "To use virtual webcam device, install Python 3.10 - 3.14."
-        )
-        if log_callback:
-            log_callback("Core video packages ready. pyvirtualcam optional (OpenCV window preview active).")
-        print("\nCore packages installed. Virtual camera optional fallback active.")
+            log_callback(msg)
         return True, msg
     else:
-        err = "Failed to install core Python packages. Please verify your internet connection or install manually."
+        err = "Failed to install Python packages. Please verify your internet connection or install manually."
         if log_callback:
             log_callback(err)
         return False, err
@@ -95,9 +74,9 @@ def print_manual_instructions():
     print("3. Run the following command:\n")
     print(f"   {sys.executable} -m pip install -r Dev/desktop/requirements.txt")
     print("\n   OR install packages individually:")
-    print("   pip install opencv-python numpy pyvirtualcam")
+    print("   pip install opencv-python numpy")
     print("\n4. To uninstall at any time:")
-    print("   pip uninstall -y opencv-python numpy pyvirtualcam\n")
+    print("   pip uninstall -y opencv-python numpy\n")
 
 if __name__ == "__main__":
     import argparse

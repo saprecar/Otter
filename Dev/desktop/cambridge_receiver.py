@@ -92,7 +92,26 @@ class CamBridgeReceiver:
         uc_bridge = None
         v4l2_bridge = None
         if enable_virtualcam:
-            if VIRTUAL_CAM_AVAILABLE:
+            # Windows: Standalone DirectShow shared memory driver (Priority 1)
+            if sys.platform.startswith("win") and UNITY_CAPTURE_AVAILABLE:
+                try:
+                    uc_bridge = UnityCaptureSharedMemory(cap_num=0)
+                    if uc_bridge.connect():
+                        print("DirectShow Virtual Camera initialized: 'Unity Video Capture' (Standalone Driver active)")
+                except Exception as e:
+                    print(f"Standalone DirectShow initialization notice: {e}")
+
+            # Linux: Native v4l2loopback loopback device (Priority 1 on Linux)
+            elif sys.platform.startswith("linux") and V4L2_LOOPBACK_AVAILABLE:
+                try:
+                    v4l2_bridge = LinuxV4L2Bridge(width=self.width, height=self.height, fps=self.fps)
+                    if v4l2_bridge.connect():
+                        print(f"Linux V4L2 Virtual Camera initialized on {v4l2_bridge.device_path}")
+                except Exception as e:
+                    print(f"Linux V4L2 initialization notice: {e}")
+
+            # Fallback to pyvirtualcam if available
+            if uc_bridge is None and v4l2_bridge is None and VIRTUAL_CAM_AVAILABLE:
                 try:
                     vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR, device=self.camera_name)
                     print(f"Virtual Camera initialized: {vcam.device}")
@@ -102,17 +121,6 @@ class CamBridgeReceiver:
                         print(f"Virtual Camera initialized (default device): {vcam.device}")
                     except Exception as ex:
                         print(f"Virtual camera initialization notice: {ex}.")
-
-            # Windows: Standalone DirectShow shared memory driver
-            if vcam is None and sys.platform.startswith("win") and UNITY_CAPTURE_AVAILABLE:
-                try:
-                    uc_bridge = UnityCaptureSharedMemory(cap_num=0)
-                    if uc_bridge.connect():
-                        print("DirectShow Virtual Camera initialized: 'Unity Video Capture' (Standalone Driver active)")
-                except Exception as e:
-                    print(f"Standalone DirectShow initialization notice: {e}")
-
-            # Linux: Native v4l2loopback loopback device
             if vcam is None and sys.platform.startswith("linux") and LINUX_V4L2_AVAILABLE:
                 try:
                     v4l2_bridge = LinuxV4L2Bridge(width=self.width, height=self.height, fps=self.fps)
