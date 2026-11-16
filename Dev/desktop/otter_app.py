@@ -12,6 +12,7 @@ from cambridge_control import CamBridgeControl
 from cambridge_receiver import CamBridgeReceiver
 import manage_dependencies
 import manage_adb
+import network_discovery
 
 # [AI-BLOCK: Otter Desktop Controller GUI for Virtual Camera, Controls, Dependency Manager & OEM Anti-Kill]
 class OtterApp:
@@ -109,30 +110,59 @@ class OtterApp:
         main_box.pack(fill=tk.BOTH, expand=True)
 
         # Connection Row
-        conn_frame = tk.LabelFrame(main_box, text=" Connection Settings ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=10, pady=8)
+        conn_frame = tk.LabelFrame(main_box, text=" Connection & Multi-Camera Settings ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=10, pady=8)
         conn_frame.pack(fill=tk.X, pady=(0, 10))
 
+        # Mode Selection & Virtual Camera Checkbox
+        row1 = tk.Frame(conn_frame, bg="#161B22")
+        row1.pack(fill=tk.X, pady=(0, 6))
+
         self.conn_mode = tk.StringVar(value="usb")
-        r_usb = tk.Radiobutton(conn_frame, text="USB (ADB Auto-Tunnel)", variable=self.conn_mode, value="usb", bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22", command=self._toggle_conn_mode)
+        r_usb = tk.Radiobutton(row1, text="USB (ADB Auto-Tunnel)", variable=self.conn_mode, value="usb", bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22", command=self._toggle_conn_mode)
         r_usb.pack(side=tk.LEFT, padx=(0, 12))
 
-        r_wifi = tk.Radiobutton(conn_frame, text="Wi-Fi (LAN IP)", variable=self.conn_mode, value="wifi", bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22", command=self._toggle_conn_mode)
+        r_wifi = tk.Radiobutton(row1, text="Wi-Fi (LAN IP)", variable=self.conn_mode, value="wifi", bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22", command=self._toggle_conn_mode)
         r_wifi.pack(side=tk.LEFT, padx=(0, 12))
 
-        tk.Label(conn_frame, text="IP:", bg="#161B22", fg="#8B949E").pack(side=tk.LEFT)
-        self.entry_ip = tk.Entry(conn_frame, width=14, bg="#0D1117", fg="#C9D1D9", insertbackground="#C9D1D9", relief=tk.FLAT)
-        self.entry_ip.insert(0, "192.168.1.50")
-        self.entry_ip.configure(state=tk.DISABLED)
-        self.entry_ip.pack(side=tk.LEFT, padx=(4, 12))
+        self.btn_auto_detect = ttk.Button(row1, text="Auto Detect IP", style="Blue.TButton", command=self._gui_auto_detect_ip)
+        self.btn_auto_detect.pack(side=tk.LEFT, padx=(0, 12))
 
         self.vcam_var = tk.BooleanVar(value=True)
-        chk_vcam = tk.Checkbutton(conn_frame, text="Virtual Camera", variable=self.vcam_var, bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22")
+        chk_vcam = tk.Checkbutton(row1, text="Virtual Camera", variable=self.vcam_var, bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22")
         chk_vcam.pack(side=tk.LEFT, padx=(0, 12))
 
-        self.btn_connect = ttk.Button(conn_frame, text="Connect & Start", style="Green.TButton", command=self.start_stream)
+        self.btn_new_instance = ttk.Button(row1, text="+ Multi-Cam Instance", style="Blue.TButton", command=self._spawn_new_instance)
+        self.btn_new_instance.pack(side=tk.RIGHT, padx=2)
+
+        # IP, Port, Camera Name & Action Buttons Row
+        row2 = tk.Frame(conn_frame, bg="#161B22")
+        row2.pack(fill=tk.X)
+
+        tk.Label(row2, text="IP:", bg="#161B22", fg="#8B949E").pack(side=tk.LEFT)
+        self.entry_ip = tk.Entry(row2, width=13, bg="#0D1117", fg="#C9D1D9", insertbackground="#C9D1D9", relief=tk.FLAT)
+        self.entry_ip.insert(0, "127.0.0.1")
+        self.entry_ip.configure(state=tk.DISABLED)
+        self.entry_ip.pack(side=tk.LEFT, padx=(3, 8))
+
+        tk.Label(row2, text="Stream Port:", bg="#161B22", fg="#8B949E").pack(side=tk.LEFT)
+        self.entry_stream_port = tk.Entry(row2, width=6, bg="#0D1117", fg="#C9D1D9", insertbackground="#C9D1D9", relief=tk.FLAT)
+        self.entry_stream_port.insert(0, "8089")
+        self.entry_stream_port.pack(side=tk.LEFT, padx=(3, 8))
+
+        tk.Label(row2, text="Ctrl Port:", bg="#161B22", fg="#8B949E").pack(side=tk.LEFT)
+        self.entry_ctrl_port = tk.Entry(row2, width=6, bg="#0D1117", fg="#C9D1D9", insertbackground="#C9D1D9", relief=tk.FLAT)
+        self.entry_ctrl_port.insert(0, "8090")
+        self.entry_ctrl_port.pack(side=tk.LEFT, padx=(3, 8))
+
+        tk.Label(row2, text="Camera Name:", bg="#161B22", fg="#8B949E").pack(side=tk.LEFT)
+        self.entry_cam_name = tk.Entry(row2, width=14, bg="#0D1117", fg="#C9D1D9", insertbackground="#C9D1D9", relief=tk.FLAT)
+        self.entry_cam_name.insert(0, "Otter Cam 1")
+        self.entry_cam_name.pack(side=tk.LEFT, padx=(3, 10))
+
+        self.btn_connect = ttk.Button(row2, text="Connect & Start", style="Green.TButton", command=self.start_stream)
         self.btn_connect.pack(side=tk.RIGHT, padx=4)
 
-        self.btn_stop = ttk.Button(conn_frame, text="Stop", style="Red.TButton", command=self.stop_stream)
+        self.btn_stop = ttk.Button(row2, text="Stop", style="Red.TButton", command=self.stop_stream)
         self.btn_stop.configure(state=tk.DISABLED)
         self.btn_stop.pack(side=tk.RIGHT, padx=4)
 
@@ -556,8 +586,55 @@ class OtterApp:
     def _toggle_conn_mode(self):
         if self.conn_mode.get() == "wifi":
             self.entry_ip.configure(state=tk.NORMAL)
+            if self.entry_ip.get().strip() == "127.0.0.1":
+                self.entry_ip.delete(0, tk.END)
+                self.entry_ip.insert(0, "192.168.1.50")
         else:
+            self.entry_ip.configure(state=tk.NORMAL)
+            self.entry_ip.delete(0, tk.END)
+            self.entry_ip.insert(0, "127.0.0.1")
             self.entry_ip.configure(state=tk.DISABLED)
+
+    def _gui_auto_detect_ip(self):
+        self.btn_auto_detect.configure(state=tk.DISABLED)
+        self.log("Scanning local Wi-Fi network for Otter camera devices...")
+
+        def scan_worker():
+            try:
+                try:
+                    port = int(self.entry_stream_port.get().strip())
+                except ValueError:
+                    port = 8089
+                found = network_discovery.scan_network_for_cameras(port=port)
+                self.root.after(0, lambda: self._on_auto_detect_finished(found))
+            except Exception as e:
+                self.root.after(0, lambda: self._on_auto_detect_finished([]))
+
+        threading.Thread(target=scan_worker, daemon=True).start()
+
+    def _on_auto_detect_finished(self, found):
+        self.btn_auto_detect.configure(state=tk.NORMAL)
+        if found:
+            self.log(f"Auto-Discovery found {len(found)} active camera(s): {', '.join(found)}")
+            self.conn_mode.set("wifi")
+            self.entry_ip.configure(state=tk.NORMAL)
+            self.entry_ip.delete(0, tk.END)
+            self.entry_ip.insert(0, found[0])
+            if len(found) > 1:
+                messagebox.showinfo("Multiple Cameras Detected", f"Found {len(found)} active cameras on network:\n\n" + "\n".join(found) + f"\n\nSelected first device: {found[0]}.\nUse '+ Multi-Cam Instance' to run others in parallel.")
+            else:
+                messagebox.showinfo("Camera Found", f"Successfully detected Otter camera at IP:\n{found[0]}")
+        else:
+            self.log("Auto-Discovery: No active camera detected on standard subnet. Please verify phone Wi-Fi connection and IP.")
+            messagebox.showinfo("Scan Complete", "No camera detected automatically.\nPlease ensure the Otter mobile app is running with stream started, or enter the phone's IP manually.")
+
+    def _spawn_new_instance(self):
+        try:
+            cmd = [sys.executable, os.path.abspath(__file__)]
+            subprocess.Popen(cmd)
+            self.log("Spawned new parallel Otter desktop instance.")
+        except Exception as e:
+            self.log(f"Failed to spawn new instance: {e}")
 
     def log(self, message):
         timestamp = time.strftime("%H:%M:%S")
@@ -568,9 +645,21 @@ class OtterApp:
         mode = self.conn_mode.get()
         host = "127.0.0.1"
 
+        try:
+            stream_port = int(self.entry_stream_port.get().strip())
+        except ValueError:
+            stream_port = 8089
+
+        try:
+            ctrl_port = int(self.entry_ctrl_port.get().strip())
+        except ValueError:
+            ctrl_port = 8090
+
+        cam_name = self.entry_cam_name.get().strip() or "Otter Camera"
+
         if mode == "usb":
-            self.log("Checking ADB availability and setting up USB tunnel...")
-            self.adb_tunnel = ADBTunnel()
+            self.log(f"Setting up USB tunnel for Stream Port {stream_port} & Control Port {ctrl_port}...")
+            self.adb_tunnel = ADBTunnel(stream_port=stream_port, control_port=ctrl_port)
             if not self.adb_tunnel.is_available():
                 self.log("Notice: ADB executable not found on PC.")
                 if messagebox.askyesno("Download Minimal ADB", "ADB is needed for USB mode, but neither Android Studio nor ADB is detected.\n\nWould you like Otter to download Google's official minimal platform-tools (~15MB)?"):
@@ -583,16 +672,16 @@ class OtterApp:
             if not self.adb_tunnel.setup_forward():
                 self.log("Warning: ADB port forwarding failed. Ensure phone has USB debugging ON and cable connected.")
             else:
-                self.log("ADB USB forwarding established.")
+                self.log(f"ADB USB forwarding established on ports {stream_port} / {ctrl_port}.")
         else:
             host = self.entry_ip.get().strip()
             if not host:
                 messagebox.showerror("Error", "Please enter a valid phone IP address.")
                 return
-            self.log(f"Configured Wi-Fi connection to {host}.")
+            self.log(f"Configured Wi-Fi connection to {host}:{stream_port}.")
 
         enable_vcam = self.vcam_var.get()
-        self.log(f"Initializing receiver (Virtual Cam: {'Enabled' if enable_vcam else 'Disabled'})...")
+        self.log(f"Initializing receiver '{cam_name}' (Virtual Cam: {'Enabled' if enable_vcam else 'Disabled'})...")
 
         res_str = self.res_combo.get()
         width, height = 1280, 720
@@ -603,8 +692,8 @@ class OtterApp:
         elif "640x360" in res_str:
             width, height = 640, 360
 
-        self.receiver = CamBridgeReceiver(host=host, stream_port=8089, control_port=8090, width=width, height=height)
-        self.controller = CamBridgeControl(host=host, port=8090)
+        self.receiver = CamBridgeReceiver(host=host, stream_port=stream_port, control_port=ctrl_port, width=width, height=height, camera_name=cam_name)
+        self.controller = CamBridgeControl(host=host, port=ctrl_port)
 
         self.receiver_thread = threading.Thread(target=self._run_receiver, args=(enable_vcam,), daemon=True)
         self.receiver_thread.start()
@@ -612,8 +701,8 @@ class OtterApp:
         self.is_connected = True
         self.btn_connect.configure(state=tk.DISABLED)
         self.btn_stop.configure(state=tk.NORMAL)
-        self.status_badge.configure(text="STREAMING ACTIVE", fg="#3FB950")
-        self.log(f"Stream receiver running on {host}:8089.")
+        self.status_badge.configure(text=f"ACTIVE: {cam_name}", fg="#3FB950")
+        self.log(f"Stream receiver '{cam_name}' active on {host}:{stream_port}.")
 
     def _run_receiver(self, enable_vcam):
         try:

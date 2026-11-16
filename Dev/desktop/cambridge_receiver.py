@@ -30,13 +30,15 @@ from cambridge_control import CamBridgeControl
 
 # [AI-BLOCK: Main CamBridge Receiver and Virtual Camera Feed]
 class CamBridgeReceiver:
-    def __init__(self, host="127.0.0.1", stream_port=8089, control_port=8090, width=1280, height=720, fps=30):
+    def __init__(self, host="127.0.0.1", stream_port=8089, control_port=8090, width=1280, height=720, fps=30, camera_name="Otter Camera 1", window_title=None):
         self.host = host
         self.stream_port = stream_port
         self.control_port = control_port
         self.width = width
         self.height = height
         self.fps = fps
+        self.camera_name = camera_name
+        self.window_title = window_title if window_title else f"Otter PC Monitor - {camera_name} [Port: {stream_port}]"
         self.running = False
         self.controller = CamBridgeControl(host=self.host, port=self.control_port)
 
@@ -69,10 +71,15 @@ class CamBridgeReceiver:
         vcam = None
         if enable_virtualcam and VIRTUAL_CAM_AVAILABLE:
             try:
-                vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR)
+                vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR, device=self.camera_name)
                 print(f"Virtual Camera initialized: {vcam.device}")
             except Exception as e:
-                print(f"Virtual camera initialization notice: {e}. Falling back to OpenCV display.")
+                # If named device fails, attempt default discovery
+                try:
+                    vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR)
+                    print(f"Virtual Camera initialized (default device): {vcam.device}")
+                except Exception as ex:
+                    print(f"Virtual camera initialization notice: {ex}. Falling back to OpenCV display.")
 
         # Demux packet stream (Length prefix + NAL payload)
         try:
@@ -102,7 +109,7 @@ class CamBridgeReceiver:
                         vcam.sleep_until_next_frame()
 
                     # Interactive PC control window
-                    cv2.imshow("CamBridge PC Monitor [Keys: + Zoom In, - Zoom Out, C Flip, Space Pause/Resume, Q Quit]", frame)
+                    cv2.imshow(self.window_title, frame)
                     key = cv2.waitKey(1) & 0xFF
                     if key == ord('q'):
                         break
