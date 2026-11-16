@@ -28,6 +28,16 @@ except ImportError:
 from adb_tunnel import ADBTunnel
 from cambridge_control import CamBridgeControl
 
+try:
+    from driver.unity_capture_bridge import UnityCaptureSharedMemory
+    UNITY_CAPTURE_AVAILABLE = True
+except Exception:
+    try:
+        from Dev.desktop.driver.unity_capture_bridge import UnityCaptureSharedMemory
+        UNITY_CAPTURE_AVAILABLE = True
+    except Exception:
+        UNITY_CAPTURE_AVAILABLE = False
+
 # [AI-BLOCK: Main CamBridge Receiver and Virtual Camera Feed]
 class CamBridgeReceiver:
     def __init__(self, host="127.0.0.1", stream_port=8089, control_port=8090, width=1280, height=720, fps=30, camera_name="Otter Camera 1", window_title=None):
@@ -69,17 +79,27 @@ class CamBridgeReceiver:
 
         # Virtual camera setup or OpenCV preview fallback
         vcam = None
-        if enable_virtualcam and VIRTUAL_CAM_AVAILABLE:
-            try:
-                vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR, device=self.camera_name)
-                print(f"Virtual Camera initialized: {vcam.device}")
-            except Exception as e:
-                # If named device fails, attempt default discovery
+        uc_bridge = None
+        if enable_virtualcam:
+            if VIRTUAL_CAM_AVAILABLE:
                 try:
-                    vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR)
-                    print(f"Virtual Camera initialized (default device): {vcam.device}")
-                except Exception as ex:
-                    print(f"Virtual camera initialization notice: {ex}. Falling back to OpenCV display.")
+                    vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR, device=self.camera_name)
+                    print(f"Virtual Camera initialized: {vcam.device}")
+                except Exception as e:
+                    try:
+                        vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR)
+                        print(f"Virtual Camera initialized (default device): {vcam.device}")
+                    except Exception as ex:
+                        print(f"Virtual camera initialization notice: {ex}.")
+
+            # If pyvirtualcam is unavailable or failed, use standalone DirectShow shared memory driver
+            if vcam is None and UNITY_CAPTURE_AVAILABLE:
+                try:
+                    uc_bridge = UnityCaptureSharedMemory(cap_num=0)
+                    if uc_bridge.connect():
+                        print("DirectShow Virtual Camera initialized: 'Unity Video Capture' (Standalone Driver active)")
+                except Exception as e:
+                    print(f"Standalone DirectShow initialization notice: {e}")
 
         # Demux packet stream (Length prefix + NAL payload)
         try:
@@ -107,6 +127,8 @@ class CamBridgeReceiver:
                     if vcam:
                         vcam.send(frame)
                         vcam.sleep_until_next_frame()
+                    elif uc_bridge:
+                        uc_bridge.send_frame(frame)
 
                     # Interactive PC control window
                     cv2.imshow(self.window_title, frame)
@@ -133,6 +155,8 @@ class CamBridgeReceiver:
             sock.close()
             if vcam:
                 vcam.close()
+            if uc_bridge:
+                uc_bridge.close()
             cv2.destroyAllWindows()
             print("CamBridge Receiver terminated cleanly.")
 

@@ -349,7 +349,27 @@ class OtterApp:
         btn_refresh = ttk.Button(btn_row, text="Refresh Status", style="Dark.TButton", command=self._refresh_dep_status_labels)
         btn_refresh.pack(side=tk.LEFT)
 
-        # Section 2: ADB & Android Minimal Tools Downloader
+        # Section 2: Standalone Windows DirectShow Virtual Camera Driver
+        vcam_card = tk.LabelFrame(scrollable_frame, text=" Windows OS DirectShow Virtual Webcam Driver (Direct Camera Recognition) ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 11, "bold"), padx=12, pady=10)
+        vcam_card.pack(fill=tk.X, pady=(0, 12))
+
+        vcam_desc = (
+            "Registers a native DirectShow virtual camera device ('Unity Video Capture') directly in Windows.\n"
+            "This allows Zoom, Google Meet, MS Teams, Discord, NVIDIA Broadcast, and OBS to detect Otter\n"
+            "as a normal physical webcam from their camera dropdown lists without running OBS Window Capture."
+        )
+        tk.Label(vcam_card, text=vcam_desc, bg="#161B22", fg="#C9D1D9", font=("Segoe UI", 9), justify=tk.LEFT, anchor="w").pack(fill=tk.X, pady=(0, 8))
+
+        vcam_btn_row = tk.Frame(vcam_card, bg="#161B22")
+        vcam_btn_row.pack(fill=tk.X)
+
+        btn_install_vcam_driver = ttk.Button(vcam_btn_row, text="Install / Register Virtual Camera", style="Green.TButton", command=self._gui_install_vcam_driver)
+        btn_install_vcam_driver.pack(side=tk.LEFT, padx=(0, 8))
+
+        btn_uninstall_vcam_driver = ttk.Button(vcam_btn_row, text="Unregister Driver", style="Red.TButton", command=self._gui_uninstall_vcam_driver)
+        btn_uninstall_vcam_driver.pack(side=tk.LEFT)
+
+        # Section 3: ADB & Android Minimal Tools Downloader
         adb_card = tk.LabelFrame(scrollable_frame, text=" ADB & Android Minimal Platform Tools (No Android Studio Needed) ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 11, "bold"), padx=12, pady=10)
         adb_card.pack(fill=tk.X, pady=(0, 12))
 
@@ -471,6 +491,32 @@ class OtterApp:
         else:
             self.log(f"ADB Download failed: {info}")
             messagebox.showerror("Error", f"Failed to download ADB: {info}")
+
+    def _gui_install_vcam_driver(self):
+        bat_path = os.path.join(os.path.dirname(__file__), "driver", "install_virtual_cam.bat")
+        if not os.path.exists(bat_path):
+            messagebox.showerror("Error", f"Could not find driver installer at:\n{bat_path}")
+            return
+        try:
+            subprocess.Popen(["cmd.exe", "/c", bat_path], shell=True)
+            self.log("Launched DirectShow Virtual Camera Driver registration.")
+            messagebox.showinfo("Driver Installer", "Launched DirectShow Driver Registration with Administrator rights.\nCheck the terminal window and accept the UAC prompt to complete setup.")
+        except Exception as e:
+            self.log(f"Failed to launch driver installer: {e}")
+            messagebox.showerror("Error", f"Failed to execute driver installer: {e}")
+
+    def _gui_uninstall_vcam_driver(self):
+        bat_path = os.path.join(os.path.dirname(__file__), "driver", "uninstall_virtual_cam.bat")
+        if not os.path.exists(bat_path):
+            messagebox.showerror("Error", f"Could not find driver uninstaller at:\n{bat_path}")
+            return
+        try:
+            subprocess.Popen(["cmd.exe", "/c", bat_path], shell=True)
+            self.log("Launched DirectShow Virtual Camera Driver unregistration.")
+            messagebox.showinfo("Driver Uninstaller", "Launched unregistration script with Administrator rights.")
+        except Exception as e:
+            self.log(f"Failed to launch driver uninstaller: {e}")
+            messagebox.showerror("Error", f"Failed to execute uninstaller: {e}")
 
     def _gui_uninstall_adb(self):
         if not messagebox.askyesno("Remove Portable ADB", "Remove downloaded portable ADB platform-tools from Otter's folder?"):
