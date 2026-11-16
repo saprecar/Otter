@@ -9,9 +9,15 @@ echo "  Developer: spacecar | https://github.com/saprecar/Otter"
 echo "==================================================="
 echo ""
 
-# Detect Python 3
+# Detect Python 3 (Prioritize local folder virtual environment .venv or venv)
 PYTHON_CMD=""
-if command -v python3 &>/dev/null; then
+if [ -f "$SCRIPT_DIR/.venv/bin/python" ]; then
+    PYTHON_CMD="$SCRIPT_DIR/.venv/bin/python"
+    echo "[INFO] Using project local virtual environment (.venv)."
+elif [ -f "$SCRIPT_DIR/venv/bin/python" ]; then
+    PYTHON_CMD="$SCRIPT_DIR/venv/bin/python"
+    echo "[INFO] Using project local virtual environment (venv)."
+elif command -v python3 &>/dev/null; then
     PYTHON_CMD="python3"
 elif command -v python &>/dev/null; then
     PYTHON_CMD="python"

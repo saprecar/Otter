@@ -8,22 +8,30 @@ echo   Developer: spacecar ^| https://github.com/saprecar/Otter
 echo ===================================================
 echo.
 
-:: Detect Python executable
+:: Detect Python executable (Prioritize local folder virtual environment .venv or venv)
 set "PYTHON_CMD="
-where python >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    set "PYTHON_CMD=python"
+if exist "%~dp0.venv\Scripts\python.exe" (
+    set "PYTHON_CMD=%~dp0.venv\Scripts\python.exe"
+    echo [INFO] Using project local virtual environment: .venv
+) else if exist "%~dp0venv\Scripts\python.exe" (
+    set "PYTHON_CMD=%~dp0venv\Scripts\python.exe"
+    echo [INFO] Using project local virtual environment: venv
 ) else (
-    where py >nul 2>&1
+    where python >nul 2>&1
     if %ERRORLEVEL% equ 0 (
-        set "PYTHON_CMD=py -3"
+        set "PYTHON_CMD=python"
     ) else (
-        if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" (
-            set "PYTHON_CMD=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
-        ) else if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" (
-            set "PYTHON_CMD=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
-        ) else if exist "%LOCALAPPDATA%\Programs\Python\Python310\python.exe" (
-            set "PYTHON_CMD=%LOCALAPPDATA%\Programs\Python\Python310\python.exe"
+        where py >nul 2>&1
+        if %ERRORLEVEL% equ 0 (
+            set "PYTHON_CMD=py -3"
+        ) else (
+            if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" (
+                set "PYTHON_CMD=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+            ) else if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" (
+                set "PYTHON_CMD=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
+            ) else if exist "%LOCALAPPDATA%\Programs\Python\Python310\python.exe" (
+                set "PYTHON_CMD=%LOCALAPPDATA%\Programs\Python\Python310\python.exe"
+            )
         )
     )
 )
@@ -55,9 +63,9 @@ if exist "%~dp0Dev\desktop\otter_app.py" (
     exit /b 1
 )
 
-echo Starting Otter Controller using: %PYTHON_CMD%
+echo Starting Otter Controller using: "%PYTHON_CMD%"
 echo.
-%PYTHON_CMD% "%APP_PATH%"
+"%PYTHON_CMD%" "%APP_PATH%"
 
 if %ERRORLEVEL% neq 0 (
     echo.
