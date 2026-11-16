@@ -14,12 +14,12 @@ DISCLAIMER = (
     "===================================================================="
 )
 
-PACKAGES = ["opencv-python>=4.8.0", "numpy>=1.24.0"]
-PACKAGE_NAMES = ["opencv-python", "numpy"]
+PACKAGES = ["opencv-python>=4.8.0", "numpy>=1.24.0", "imageio-ffmpeg>=0.4.8"]
+PACKAGE_NAMES = ["opencv-python", "numpy", "imageio-ffmpeg"]
 
 def check_dependencies():
     status = {}
-    for mod_name, pkg_name in [("cv2", "opencv-python"), ("numpy", "numpy")]:
+    for mod_name, pkg_name in [("cv2", "opencv-python"), ("numpy", "numpy"), ("imageio_ffmpeg", "imageio-ffmpeg")]:
         try:
             __import__(mod_name)
             status[pkg_name] = True

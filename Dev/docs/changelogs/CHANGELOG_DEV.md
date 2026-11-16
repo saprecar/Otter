@@ -113,3 +113,10 @@
 - Resolved UnityCapture DirectShow green diagnostic screen bug (`Dev/desktop/driver/unity_capture_bridge.py`) by correcting row stride from byte pitch to pixel width (`stride = w`), converting frames to true RGBA (`FORMAT_UINT8 = 0`), and setting persist timeout.
 - Enabled dual-output in `cambridge_receiver.py` so incoming Android frames broadcast simultaneously to both 'Unity Video Capture' and 'OBS Virtual Camera' without driver conflicts.
 - Updated documentation and in-app instructions (`USER_GUIDE.md`, `otter_app.py`) to guide users on selecting either virtual device.
+
+## 2026-11-17 02:26:00 IST (UTC+05:30)
+- Fixed video stream decode mismatch in `cambridge_receiver.py`: Integrated `H264DecoderPipe` powered by standalone static `imageio-ffmpeg` to decode Android MediaCodec H.264 NAL packets in real-time, resolving the issue where `cv2.imdecode` returned `None` on video packets.
+- Maintained compatibility for both H.264 stream slices and standard JPEG frames with auto-detection.
+- Added Android 14+ Native USB Webcam control card and ADB trigger (`svc usb setFunctions uvc`) in Tab 3 of `otter_app.py` for Google Pixel, Motorola, and supported devices.
+- Added graceful OEM detection informing users when manufacturers (such as Vivo/iQOO) have stripped native UVC kernel drivers, automatically utilizing Otter's high-speed ADB tunnel instead.
+- Updated `requirements.txt` and `manage_dependencies.py` to include `imageio-ffmpeg`.

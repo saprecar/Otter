@@ -19,3 +19,4 @@
 - FEAT-017 | 2026-11-17 | Standalone ADB & Platform Tools Downloader | Automated downloader/extractor for official Google Android Platform Tools (ADB) without needing Android Studio. Status: Tested
 - FEAT-018 | 2026-11-17 | Multi-Camera & Auto-Discovery Desktop Suite | Auto-detect camera IP/port, custom stream & control ports, custom virtual camera name, and multi-camera instance support. Status: WIP
 - FEAT-019 | 2026-11-17 | OBS Virtual Camera Fallback Bridge | Native shared memory output to OBS Virtual Camera driver without requiring separate DLL installation. Status: Tested
+- FEAT-020 | 2026-11-17 | Android 14 Native UVC Webcam Support | Detect and trigger native Android 14 USB Webcam gadget mode (svc usb setFunctions uvc) on supported devices. Status: Tested

@@ -58,6 +58,96 @@ except Exception:
     except Exception:
         LINUX_V4L2_AVAILABLE = False
 
+# [AI-BLOCK: High-Performance Standalone H.264 Video Stream Decoder]
+class H264DecoderPipe:
+    """
+    Decodes incoming raw H.264 NAL units (from Android MediaCodec) using standalone static FFmpeg.
+    Outputs uncompressed BGR frames without needing pyvirtualcam or C++ compilation.
+    """
+    def __init__(self, width=1280, height=720):
+        self.width = width
+        self.height = height
+        self.frame_size = width * height * 3
+        self.proc = None
+        self.running = False
+        self.latest_frame = None
+        self.lock = threading.Lock()
+        self.reader_thread = None
+        self._init_ffmpeg()
+
+    def _init_ffmpeg(self):
+        ffmpeg_exe = "ffmpeg"
+        try:
+            import imageio_ffmpeg
+            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            pass
+
+        cmd = [
+            ffmpeg_exe,
+            "-loglevel", "error",
+            "-f", "h264",
+            "-i", "pipe:0",
+            "-f", "rawvideo",
+            "-pix_fmt", "bgr24",
+            "-vsync", "0",
+            "pipe:1"
+        ]
+        try:
+            self.proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                bufsize=10**7
+            )
+            self.running = True
+            self.reader_thread = threading.Thread(target=self._reader_loop, daemon=True)
+            self.reader_thread.start()
+        except Exception as e:
+            print(f"H.264 FFmpeg decoder init notice: {e}")
+            self.proc = None
+
+    def _reader_loop(self):
+        while self.running and self.proc and self.proc.stdout:
+            try:
+                raw_bytes = self.proc.stdout.read(self.frame_size)
+                if len(raw_bytes) == self.frame_size:
+                    frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((self.height, self.width, 3))
+                    with self.lock:
+                        self.latest_frame = frame
+                elif len(raw_bytes) == 0:
+                    break
+            except Exception:
+                break
+
+    def push_packet(self, data: bytes):
+        if self.proc and self.proc.stdin:
+            try:
+                self.proc.stdin.write(data)
+                self.proc.stdin.flush()
+            except Exception:
+                pass
+
+    def get_latest_frame(self) -> np.ndarray:
+        with self.lock:
+            frame = self.latest_frame
+            self.latest_frame = None
+            return frame
+
+    def close(self):
+        self.running = False
+        if self.proc:
+            try:
+                self.proc.stdin.close()
+            except Exception:
+                pass
+            try:
+                self.proc.kill()
+            except Exception:
+                pass
+            self.proc = None
+
 # [AI-BLOCK: Main CamBridge Receiver and Virtual Camera Feed]
 class CamBridgeReceiver:
     def __init__(self, host="127.0.0.1", stream_port=8089, control_port=8090, width=1280, height=720, fps=30, camera_name="Otter Camera 1", window_title=None):
@@ -142,6 +232,9 @@ class CamBridgeReceiver:
                     except Exception as ex:
                         print(f"Virtual camera initialization notice: {ex}.")
 
+        # Real-time H.264 stream decoder pipe
+        decoder = H264DecoderPipe(width=self.width, height=self.height)
+
         # Demux packet stream (Length prefix + NAL payload)
         try:
             while self.running:
@@ -156,9 +249,15 @@ class CamBridgeReceiver:
                 if not packet_data:
                     break
 
-                # Frame decode via OpenCV
-                nparr = np.frombuffer(packet_data, np.uint8)
-                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                frame = None
+                # Check for standard JPEG packet
+                if packet_data.startswith(b'\xff\xd8'):
+                    nparr = np.frombuffer(packet_data, np.uint8)
+                    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                else:
+                    # Raw H.264 NAL packet from Android MediaCodec
+                    decoder.push_packet(packet_data)
+                    frame = decoder.get_latest_frame()
 
                 if frame is not None:
                     # Resize to match standard virtual camera canvas if needed
@@ -198,6 +297,7 @@ class CamBridgeReceiver:
             print(f"Stream encountered event: {e}")
         finally:
             self.running = False
+            decoder.close()
             sock.close()
             if vcam:
                 vcam.close()

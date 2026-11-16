@@ -396,7 +396,27 @@ class OtterApp:
         )
         tk.Label(adb_card, text=adb_desc, bg="#161B22", fg="#8B949E", font=("Segoe UI", 8), justify=tk.LEFT, anchor="w").pack(fill=tk.X, pady=(6, 0))
 
-        # Section 3: OEM Anti-Kill & Background Fixes
+        # Section 4: Android 14+ Native USB Webcam (Supported Devices)
+        uvc_card = tk.LabelFrame(scrollable_frame, text=" Android 14+ Native USB Webcam Mode (Pixel, Moto, Supported Devices) ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 11, "bold"), padx=12, pady=10)
+        uvc_card.pack(fill=tk.X, pady=(0, 12))
+
+        uvc_desc = (
+            "On devices with Android 14 QPR1+ where the manufacturer enabled UVC gadget support (e.g. Google Pixel, Motorola),\n"
+            "your phone can transform into a native plug-and-play USB hardware webcam in Windows without needing Otter client.\n"
+            "If your manufacturer locked or omitted the driver (e.g. Vivo/iQOO, Samsung), Otter automatically streams via ADB instead."
+        )
+        tk.Label(uvc_card, text=uvc_desc, bg="#161B22", fg="#8B949E", font=("Segoe UI", 8), justify=tk.LEFT, anchor="w").pack(fill=tk.X, pady=(0, 8))
+
+        uvc_btn_row = tk.Frame(uvc_card, bg="#161B22")
+        uvc_btn_row.pack(fill=tk.X)
+
+        btn_activate_uvc = ttk.Button(uvc_btn_row, text="Activate Android 14 USB Webcam", style="Green.TButton", command=self._gui_activate_uvc)
+        btn_activate_uvc.pack(side=tk.LEFT, padx=(0, 8))
+
+        btn_reset_uvc = ttk.Button(uvc_btn_row, text="Reset USB Mode (MTP)", style="Dark.TButton", command=self._gui_reset_uvc)
+        btn_reset_uvc.pack(side=tk.LEFT)
+
+        # Section 5: OEM Anti-Kill & Background Fixes
         oem_card = tk.LabelFrame(scrollable_frame, text=" OEM Background & Anti-Kill Fixes (MIUI / HyperOS / ColorOS / One UI) ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 11, "bold"), padx=12, pady=10)
         oem_card.pack(fill=tk.X, pady=(0, 12))
 
@@ -525,6 +545,48 @@ class OtterApp:
         self._refresh_adb_status_labels()
         self.log("Portable ADB tools removed.")
         messagebox.showinfo("Removed", "Portable ADB platform-tools removed.")
+
+    def _gui_activate_uvc(self):
+        self.log("Requesting Android 14 native USB webcam mode via ADB (svc usb setFunctions uvc)...")
+        def worker():
+            from adb_tunnel import ADBTunnel
+            tunnel = ADBTunnel()
+            adb_cmd = tunnel.adb_cmd
+            try:
+                res = subprocess.run([adb_cmd, "shell", "svc", "usb", "setFunctions", "uvc"], capture_output=True, text=True, timeout=5)
+                # Check if device has DeviceAsWebcam package
+                check_pkg = subprocess.run([adb_cmd, "shell", "pm", "path", "com.android.DeviceAsWebcam"], capture_output=True, text=True, timeout=5)
+                has_webcam_app = "package:" in (check_pkg.stdout or "")
+
+                if has_webcam_app:
+                    msg = "Native Android 14 USB Webcam activated!\nCheck Windows Device Manager or Camera app — your phone is now an actual USB webcam."
+                    self.root.after(0, lambda: messagebox.showinfo("Android 14 Webcam", msg))
+                    self.log("Native Android 14 USB webcam activated successfully.")
+                else:
+                    msg = (
+                        "Notice: The command was sent, but your phone manufacturer has stripped the Google DeviceAsWebcam package.\n\n"
+                        "Your device does not support native UVC hardware webcam mode.\n"
+                        "Otter's standard ADB Tunnel mode is automatically used instead (fully functional on all devices)."
+                    )
+                    self.root.after(0, lambda: messagebox.showinfo("OEM Locked Notice", msg))
+                    self.log("Device manufacturer stripped DeviceAsWebcam; using Otter ADB tunnel instead.")
+            except Exception as e:
+                self.log(f"UVC mode request error: {e}")
+                self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to send ADB command: {e}"))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _gui_reset_uvc(self):
+        self.log("Resetting phone USB mode to standard MTP/charging...")
+        def worker():
+            from adb_tunnel import ADBTunnel
+            tunnel = ADBTunnel()
+            try:
+                subprocess.run([tunnel.adb_cmd, "shell", "svc", "usb", "setFunctions", "mtp"], capture_output=True, text=True, timeout=5)
+                self.log("Phone USB mode restored to MTP.")
+                self.root.after(0, lambda: messagebox.showinfo("Reset USB", "Phone USB mode reset to standard file transfer (MTP)."))
+            except Exception as e:
+                self.log(f"Reset USB error: {e}")
+        threading.Thread(target=worker, daemon=True).start()
 
     def _gui_install_deps(self):
         disclaimer = (

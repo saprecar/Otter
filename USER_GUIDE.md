@@ -126,6 +126,13 @@ Allows wireless streaming over your local network without any cables attached.
 5. **Ready**:
    - Virtual camera is now broadcasting wirelessly to all video applications.
 
+### Method C: Android 14+ Native Hardware USB Webcam (Supported Devices)
+On devices running Android 14 QPR1+ where the manufacturer included UVC gadget support (e.g. Google Pixel, Motorola):
+1. Connect via USB cable with USB Debugging enabled.
+2. In Otter Desktop under Tab 3 ("Dependencies & Setup"), click **Activate Android 14 USB Webcam**.
+3. If supported by your ROM, the phone switches directly into a hardware USB Video Class (UVC) webcam without requiring receiver streaming.
+4. If your OEM locked or stripped the driver (e.g. Vivo/iQOO, Samsung), Otter automatically notifies you and uses low-latency ADB tunnel mode instead.
+
 ---
 
 ## 4. How to Use with Streaming & Video Conferencing Apps
