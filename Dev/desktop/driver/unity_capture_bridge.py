@@ -7,14 +7,31 @@ import numpy as np
 
 PAGE_READWRITE = 0x04
 FILE_MAP_WRITE = 0x0002
-FILE_MAP_ALL_ACCESS = 0x001F001F
 SYNCHRONIZE = 0x00100000
 EVENT_MODIFY_STATE = 0x0002
 INFINITE = 0xFFFFFFFF
-WAIT_OBJECT_0 = 0x00000000
-MAX_SHARED_IMAGE_SIZE = 3840 * 2160 * 4 * 2 # 4K max buffer
+MAX_SHARED_IMAGE_SIZE = 3840 * 2160 * 4 * 2 # 4K buffer limit
 
 kernel32 = ctypes.windll.kernel32
+kernel32.CreateFileMappingA.restype = wintypes.HANDLE
+kernel32.CreateFileMappingA.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, wintypes.LPCSTR]
+kernel32.OpenFileMappingA.restype = wintypes.HANDLE
+kernel32.OpenFileMappingA.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCSTR]
+kernel32.MapViewOfFile.restype = ctypes.c_void_p
+kernel32.MapViewOfFile.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, ctypes.c_size_t]
+kernel32.UnmapViewOfFile.argtypes = [ctypes.c_void_p]
+kernel32.CreateMutexA.restype = wintypes.HANDLE
+kernel32.CreateMutexA.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCSTR]
+kernel32.OpenMutexA.restype = wintypes.HANDLE
+kernel32.OpenMutexA.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCSTR]
+kernel32.CreateEventA.restype = wintypes.HANDLE
+kernel32.CreateEventA.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.BOOL, wintypes.LPCSTR]
+kernel32.OpenEventA.restype = wintypes.HANDLE
+kernel32.OpenEventA.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCSTR]
+kernel32.SetEvent.argtypes = [wintypes.HANDLE]
+kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+kernel32.ReleaseMutex.argtypes = [wintypes.HANDLE]
+kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
 
 class UnityCaptureSharedMemory:
     """
@@ -31,25 +48,28 @@ class UnityCaptureSharedMemory:
         self.h_shared_file = None
         self.p_buf = None
 
-        cap_char = chr(ord('0') + cap_num) if cap_num > 0 else ""
-        self.name_mutex = f"UnityCapture_Mutx{cap_char}".encode("ascii")
-        self.name_want = f"UnityCapture_Want{cap_char}".encode("ascii")
-        self.name_sent = f"UnityCapture_Sent{cap_char}".encode("ascii")
-        self.name_data = f"UnityCapture_Data{cap_char}".encode("ascii")
+        # For CapNum 0: exact name string terminates before the trailing '0' (compat with original filter)
+        cap_suffix = chr(ord('0') + cap_num) if cap_num > 0 else ""
+        self.name_mutex = f"UnityCapture_Mutx{cap_suffix}".encode("ascii")
+        self.name_want = f"UnityCapture_Want{cap_suffix}".encode("ascii")
+        self.name_sent = f"UnityCapture_Sent{cap_suffix}".encode("ascii")
+        self.name_data = f"UnityCapture_Data{cap_suffix}".encode("ascii")
 
     def connect(self) -> bool:
         """Connect to the DirectShow filter shared memory created during camera open"""
         # 1. Mutex
         self.h_mutex = kernel32.OpenMutexA(SYNCHRONIZE, False, self.name_mutex)
         if not self.h_mutex:
-            # Create if filter hasn't started yet
             self.h_mutex = kernel32.CreateMutexA(None, False, self.name_mutex)
         if not self.h_mutex:
             return False
 
-        # 2. Want Frame Event
-        self.h_want_event = kernel32.CreateEventA(None, False, False, self.name_want)
-        # 3. Sent Frame Event
+        # 2. Want Frame Event (filter creates to signal it wants frames)
+        self.h_want_event = kernel32.OpenEventA(EVENT_MODIFY_STATE, False, self.name_want)
+        if not self.h_want_event:
+            self.h_want_event = kernel32.CreateEventA(None, False, False, self.name_want)
+
+        # 3. Sent Frame Event (sender signals to notify receiver new frame is ready)
         self.h_sent_event = kernel32.OpenEventA(EVENT_MODIFY_STATE, False, self.name_sent)
         if not self.h_sent_event:
             self.h_sent_event = kernel32.CreateEventA(None, False, False, self.name_sent)
@@ -57,11 +77,10 @@ class UnityCaptureSharedMemory:
         # 4. Shared Memory Buffer
         self.h_shared_file = kernel32.OpenFileMappingA(FILE_MAP_WRITE, False, self.name_data)
         if not self.h_shared_file:
-            # Pre-allocate buffer so filter binds immediately upon activation
             header_size = 32
             total_size = header_size + MAX_SHARED_IMAGE_SIZE
             self.h_shared_file = kernel32.CreateFileMappingA(
-                -1, None, PAGE_READWRITE, 0, total_size, self.name_data
+                wintypes.HANDLE(-1), None, PAGE_READWRITE, 0, total_size, self.name_data
             )
 
         if not self.h_shared_file:
