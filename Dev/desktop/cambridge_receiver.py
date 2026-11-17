@@ -1,10 +1,15 @@
 import argparse
+import os
 import socket
 import struct
 import subprocess
 import sys
 import threading
 import time
+
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _CURRENT_DIR not in sys.path:
+    sys.path.insert(0, _CURRENT_DIR)
 
 try:
     import cv2

@@ -124,6 +124,79 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
+            <!-- Card: Download & Run PC Desktop Client -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#161B22"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Required: Download PC Desktop Client"
+                    android:textColor="#58A6FF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="4dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Otter streams video from your phone, but you need the Otter PC Desktop Client running on your computer to register the Virtual Webcam (for OBS, Discord, Google Meet, Zoom, etc.)."
+                    android:textColor="#C9D1D9"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:text="Step 1: Download from GitHub on your PC"
+                    android:textColor="#3FB950"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="2dp"
+                    android:lineSpacingExtra="2dp"
+                    android:text="Visit: https://github.com/saprecar/Otter\nClick Code -> Download ZIP and extract it on your computer."
+                    android:textColor="#C9D1D9"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:text="Step 2: One-Click Launch Script"
+                    android:textColor="#E3B341"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="2dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Open the extracted Otter folder on your PC and run:\n• Windows: Double-click run_windows.bat\n• Linux: Run ./run_linux.sh\n• macOS: Double-click run_macos.command\n• Or command: python Dev/desktop/otter_app.py"
+                    android:textColor="#C9D1D9"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnCopyPcInstructions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:backgroundTint="#1F6FEB"
+                    android:text="Copy PC Download &amp; Run Steps"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
             <!-- Card 2: How to Use & Setup -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -251,7 +324,75 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Card 4: Special Thanks -->
+            <!-- Card 4: Universal Policies & Legal Agreement (Policies And Agreement Folder) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#161B22"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Policies, Agreement &amp; Attribution"
+                    android:textColor="#58A6FF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="• 100% Local Peer-to-Peer: Zero developer data retention or cloud storage.\n• Data Deletion &amp; Liability: Developer holds zero data, so server deletion is not applicable. Zero liability for local network packet loss, interception, or bugs.\n• Attribution: Created by spacecar (https://github.com/saprecar/Otter).\n• Governing Law: Republic of India | Jurisdiction: Competent Courts of Narmadapuram, Madhya Pradesh, India (PIN: 461001 / 461005).\n• Official Contact: getspacecar@gmail.com (Subject: [Otter-Legal])."
+                    android:textColor="#C9D1D9"
+                    android:textSize="11sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="10dp">
+
+                    <Button
+                        android:id="@+id/btnViewPrivacyPolicy"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="3dp"
+                        android:backgroundTint="#21262D"
+                        android:text="Master Policy"
+                        android:textColor="#58A6FF"
+                        android:textSize="10sp" />
+
+                    <Button
+                        android:id="@+id/btnViewUserAgreement"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="3dp"
+                        android:layout_marginEnd="3dp"
+                        android:backgroundTint="#21262D"
+                        android:text="Attribution"
+                        android:textColor="#58A6FF"
+                        android:textSize="10sp" />
+
+                    <Button
+                        android:id="@+id/btnViewLicense"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="3dp"
+                        android:backgroundTint="#21262D"
+                        android:text="License"
+                        android:textColor="#58A6FF"
+                        android:textSize="10sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Card 5: Special Thanks -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

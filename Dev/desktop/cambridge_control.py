@@ -66,6 +66,30 @@ class CamBridgeControl:
     def set_zoom(self, zoom_factor: float):
         return self.send_command({"action": "set_zoom", "value": zoom_factor})
 
+    def set_iso(self, value: int):
+        return self.send_command({"action": "set_iso", "value": value})
+
+    def set_shutter(self, value: int):
+        return self.send_command({"action": "set_shutter", "value": value})
+
+    def set_awb(self, mode: int):
+        return self.send_command({"action": "set_awb", "mode": mode})
+
+    def set_effect(self, effect: int):
+        return self.send_command({"action": "set_effect", "effect": effect})
+
+    def set_fps(self, fps: int):
+        return self.send_command({"action": "set_fps", "fps": fps})
+
+    def set_quick_mode(self, mode: str):
+        return self.send_command({"action": "set_quick_mode", "mode": mode})
+
+    def capture_still(self):
+        return self.send_command({"action": "capture_still"})
+
+    def get_capabilities(self):
+        return self.send_command({"action": "get_capabilities"})
+
     def pause(self):
         return self.send_command({"action": "pause"})
 

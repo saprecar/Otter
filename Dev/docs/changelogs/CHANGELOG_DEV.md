@@ -156,3 +156,52 @@
   - Added Fullscreen mode with collapsible floating action menu (`⚡`) matching reference design.
   - Extended TCP RPC control server with `get_capabilities`, `set_zoom`, `ev_step`, `set_iso`, `set_shutter`, `set_awb`, `set_effect`, `set_fps`, `set_quick_mode`, and `capture_still`.
   - Compiled debug APK via Gradle with zero errors (778 KB binary).
+
+
+## 2026-11-17 09:11:30 IST (UTC+05:30)
+- Redesigned PC desktop controller in `Dev/desktop/otter_app.py` with modern scrollable dark layout, Quick Modes grid, and pro camera controls.
+- Added PC sliders for Zoom (1.0x-8.0x) with +/- buttons, and discrete sliders for ISO (100-3200), Shutter Speed (1/2000s-1/15s), White Balance (Daylight/Cloudy/Fluorescent/Tungsten), and Color FX (Mono/Negative/Sepia).
+- Implemented Auto toggle interlocks on PC: enabling Auto locks slider to disabled and sends auto command; disabling Auto unlocks slider for fine manual adjustment.
+- Added OpenCamera-style sensor orientation math (`sensorOrientation - deviceOrientation`) via `OrientationEventListener` in `MainActivity.java` so camera preview and PC stream stay upright in both portrait and landscape.
+- Fixed landscape UI bug by setting `screenOrientation="portrait"` on `MainActivity`, preserving the clean portrait layout while allowing the camera sensor to adapt to landscape holding.
+- Added comprehensive PC Desktop Client download and run instructions card with one-click clipboard copying to `AboutActivity.java` and `activity_about.xml`.
+
+## 2026-11-17 09:36:30 IST (UTC+05:30)
+- Created isolated stable release folders under `Stable/`: `Stable_Desktop_Client/` and `Stable_android_app/`.
+- Configured desktop client launcher scripts (`run_windows.bat`, `run_linux.sh`, `run_macos.command`, `run_macos.sh`) to execute with `Stable_Desktop_Client` as the root directory, ensuring local imports resolve correctly across all platforms.
+- Packaged clean Android source tree into `Stable/Stable_android_app/` with `versionCode 2` and `versionName "1.1.0.0"`.
+- Compiled and packaged pre-built signed release APK `Otter-v1.1.0.0.apk` (618 KB) into `Stable/Stable_android_app/`.
+- Cleaned intermediate build artifacts and cache directories (`build/`, `.gradle/`, `__pycache__/`) from both stable directories.
+- Removed `Stable/` from `.gitignore` to allow full tracking and uploading of stable release deliverables to GitHub.
+- Created `Stable/README.md`, `Stable/Stable_android_app/README.md`, and official release changelog `stable_release/CHANGELOG_STABLE.md`.
+
+## 2026-11-17 09:43:00 IST (UTC+05:30)
+- Separated stable releases into dedicated distribution packages: `Stable/stable_playstore_version/` and `Stable/stable_non_playstore_version/`.
+- Authored comprehensive Privacy Policy (`docs/PRIVACY_POLICY.md` & `privacy_policy.html`) and User Agreement (`docs/USER_AGREEMENT.md` & `user_agreement.html`) governed by the Laws of the Republic of India (IT Act 2000, Section 43A, SPDI Rules 2011).
+- Incorporated mandatory legal disclaimers: zero developer data collection, 100% peer-to-peer local processing, disclosure of OS-level Google Play analytics, absolute disclaimer of warranties (AS-IS), and complete limitation of liability for data leakage, software bugs, and third-party network risks.
+- Added in-app Privacy Policy and User Agreement triggers and visual card to `AboutActivity.java` and `activity_about.xml`.
+- Generated Google Play Console Data Safety questionnaire guide (`docs/GOOGLE_PLAY_DATA_SAFETY.md`).
+- Built production Android App Bundle `Otter-v1.1.0.0.aab` (625 KB) in `stable_playstore_version/`.
+- Built pre-signed release APK `Otter-v1.1.0.0-signed.apk` (619 KB) and unsigned APK `Otter-v1.1.0.0-unsigned.apk` (611 KB) in `stable_non_playstore_version/`.
+
+## 2026-11-17 09:47:00 IST (UTC+05:30)
+- Completed comprehensive brand audit across all workspace files, documentation, scripts, and source trees for "DroidCam", "dev47apps", "Iriun", "EpocCam", "iVCam", and related third-party brand names.
+- Confirmed zero occurrences across all codebases and documentation; all terminology is strictly generic ("virtual webcam", "remote camera", "video streaming tool").
+- Respected build constraints: zero APK builds generated.
+
+## 2026-11-17 09:51:00 IST (UTC+05:30)
+- Implemented first-time start and per-update mandatory consent enforcement on both Android and PC:
+  - Android (`MainActivity.java`): Added `checkAndEnforceConsent()` evaluating stored `accepted_policy_version` against `POLICY_VERSION`. Displays non-dismissible modal agreement outlining zero developer data collection, local P2P architecture, OS-level telemetry disclosure, and Indian Law jurisdiction. "Accept & Continue" saves agreement state; "Decline & Exit" calls `finishAffinity()` terminating app.
+  - Desktop Client (`otter_app.py`): Added `_check_consent_policy()` checking `~/.otter_consent.json`. Displays modal dialog blocking user interaction until acceptance. "I Agree & Continue" persists version consent; "Decline & Exit" terminates client.
+  - Online Policy Links: Replaced all hardcoded policy texts with dynamic external browser links to GitHub-hosted `PRIVACY_POLICY.md`, `USER_AGREEMENT.md`, and `LICENSE` across `AboutActivity.java`, `activity_about.xml`, `otter_app.py`, and consent dialogs.
+  - Synchronized changes across `Dev/`, `Stable/stable_playstore_version/`, `Stable/stable_non_playstore_version/`, and `Stable/Stable_Desktop_Client/`.
+  - Respected user constraint: zero APK builds generated.
+
+## 2026-11-17 10:15:30 IST (UTC+05:30)
+- Consolidated all separate legal policies into universal `Policies And Agreement/` directory containing pure Markdown documentation (`POLICIES_AND_AGREEMENT.md`, `ATTRIBUTION_AND_LICENSES.md`, `PRIVACY_POLICY.md`, `USER_AGREEMENT.md`, `GOOGLE_PLAY_DATA_SAFETY.md`, `README.md`). Removed all temporary HTML policy files.
+- Updated legal jurisdiction across all documents, in-app screens, and desktop controller to the Competent Courts of Narmadapuram, Madhya Pradesh, India (PIN: 461001 / 461005).
+- Added explicit legal clauses: zero developer data retention (making server deletion inapplicable), zero liability for local network data transmission/interception/packet loss, and clear OEM/Google Play platform telemetry disclaimers.
+- Added mandatory attribution clause requiring all redistributions, forks, or derivations to credit developer `spacecar`, name `Otter`, and link to `https://github.com/saprecar/Otter`.
+- Updated contact protocol to `getspacecar@gmail.com` with mandatory subject line tags (`[Otter-Legal]`, `[Otter-Inquiry]`) or official GitHub issues.
+- Updated Android app (`MainActivity.java`, `AboutActivity.java`, `activity_about.xml`) and PC desktop client (`otter_app.py`) so consent dialogs and About screens link directly to the consolidated policy.
+- Verified syntax with `py_compile` and `compileDebugJavaWithJavac`. Respected build constraints: zero APK builds generated.

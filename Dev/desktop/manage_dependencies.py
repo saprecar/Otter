@@ -72,7 +72,7 @@ def print_manual_instructions():
     print("1. Open your terminal or Command Prompt.")
     print("2. Ensure Python 3.8+ and pip are installed.")
     print("3. Run the following command:\n")
-    print(f"   {sys.executable} -m pip install -r Dev/desktop/requirements.txt")
+    print(f"   {sys.executable} -m pip install -r requirements.txt")
     print("\n   OR install packages individually:")
     print("   pip install opencv-python numpy")
     print("\n4. To uninstall at any time:")

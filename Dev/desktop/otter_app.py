@@ -1,5 +1,11 @@
 import sys
 import os
+
+# Ensure local script directory is root of module resolution
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _CURRENT_DIR not in sys.path:
+    sys.path.insert(0, _CURRENT_DIR)
+
 import threading
 import time
 import tkinter as tk
@@ -7,20 +13,56 @@ from tkinter import ttk, messagebox
 import webbrowser
 import subprocess
 
-from adb_tunnel import ADBTunnel
-from cambridge_control import CamBridgeControl
-from cambridge_receiver import CamBridgeReceiver
-import manage_dependencies
-import manage_adb
-import network_discovery
+try:
+    from adb_tunnel import ADBTunnel
+    from cambridge_control import CamBridgeControl
+    from cambridge_receiver import CamBridgeReceiver
+    import manage_dependencies
+    import manage_adb
+    import network_discovery
+except ImportError:
+    from Dev.desktop.adb_tunnel import ADBTunnel
+    from Dev.desktop.cambridge_control import CamBridgeControl
+    from Dev.desktop.cambridge_receiver import CamBridgeReceiver
+    import Dev.desktop.manage_dependencies as manage_dependencies
+    import Dev.desktop.manage_adb as manage_adb
+    import Dev.desktop.network_discovery as network_discovery
 
 # [AI-BLOCK: Otter Desktop Controller GUI for Virtual Camera, Controls, Dependency Manager & OEM Anti-Kill]
 class OtterApp:
+    ISO_VALUES = [100, 200, 400, 800, 1600, 3200]
+    SHUTTER_STEPS = [
+        (500_000, "1/2000s"),
+        (1_000_000, "1/1000s"),
+        (2_000_000, "1/500s"),
+        (4_000_000, "1/250s"),
+        (8_000_000, "1/125s"),
+        (16_666_666, "1/60s"),
+        (33_333_333, "1/30s"),
+        (66_666_666, "1/15s")
+    ]
+    WB_MODES = [
+        (1, "Daylight (5500K)"),
+        (2, "Cloudy (6500K)"),
+        (3, "Fluorescent (4000K)"),
+        (4, "Tungsten (2800K)")
+    ]
+    FX_MODES = [
+        (1, "Mono / B&W"),
+        (2, "Negative"),
+        (3, "Sepia")
+    ]
+
+    MASTER_POLICY_URL = "https://github.com/saprecar/Otter/blob/main/Policies%20And%20Agreement/POLICIES_AND_AGREEMENT.md"
+    ATTRIBUTION_URL = "https://github.com/saprecar/Otter/blob/main/Policies%20And%20Agreement/ATTRIBUTION_AND_LICENSES.md"
+    LICENSE_URL = "https://github.com/saprecar/Otter/blob/main/LICENSE"
+    POLICY_VERSION = "1.1.0.0"
+
     def __init__(self, root):
         self.root = root
         self.root.title("Otter - Virtual Camera Controller")
-        self.root.geometry("820x680")
-        self.root.minsize(740, 600)
+        self.root.geometry("880x780")
+        self.root.minsize(820, 640)
         self.root.configure(bg="#0D1117")
 
         self.receiver = None
@@ -30,6 +72,12 @@ class OtterApp:
         self.is_connected = False
         self.current_zoom = 1.0
         self.is_mirrored = False
+        self._debounce_timers = {}
+
+        self.iso_auto_var = tk.BooleanVar(value=True)
+        self.shutter_auto_var = tk.BooleanVar(value=True)
+        self.wb_auto_var = tk.BooleanVar(value=True)
+        self.fx_auto_var = tk.BooleanVar(value=True)
 
         self._setup_styles()
         self._build_header()
@@ -38,6 +86,101 @@ class OtterApp:
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         threading.Thread(target=self._poll_status_loop, daemon=True).start()
+        self.root.after(100, self._check_consent_policy)
+
+    def _check_consent_policy(self):
+        consent_path = os.path.expanduser("~/.otter_consent.json")
+        has_consented = False
+        if os.path.exists(consent_path):
+            try:
+                import json
+                with open(consent_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if data.get("accepted_version") == self.POLICY_VERSION:
+                        has_consented = True
+            except Exception:
+                has_consented = False
+
+        if not has_consented:
+            self._show_consent_modal(consent_path)
+
+    def _show_consent_modal(self, consent_path):
+        dlg = tk.Toplevel(self.root)
+        dlg.title("Otter - Terms of Service & Privacy Policy Consent")
+        dlg.geometry("640x540")
+        dlg.minsize(580, 500)
+        dlg.configure(bg="#0D1117")
+        dlg.transient(self.root)
+        dlg.grab_set()
+
+        def _on_decline():
+            dlg.destroy()
+            self.root.destroy()
+            sys.exit(0)
+
+        dlg.protocol("WM_DELETE_WINDOW", _on_decline)
+
+        card = tk.Frame(dlg, bg="#161B22", padx=20, pady=20)
+        card.pack(fill=tk.BOTH, expand=True, padx=16, pady=16)
+
+        tk.Label(card, text="Welcome to Otter", font=("Segoe UI", 16, "bold"), fg="#58A6FF", bg="#161B22").pack(anchor="w", pady=(0, 4))
+        tk.Label(card, text="Please review and agree to the Terms of Service & Privacy Policy to continue.", font=("Segoe UI", 10), fg="#8B949E", bg="#161B22").pack(anchor="w", pady=(0, 10))
+
+        summary_box = tk.LabelFrame(card, text=" Operational & Privacy Summary ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 9, "bold"), padx=12, pady=10)
+        summary_box.pack(fill=tk.BOTH, expand=True, pady=(0, 12))
+
+        summary_text = (
+            "• 100% Local Peer-to-Peer Architecture:\n"
+            "  All video decoding, remote control, and virtual camera feeds operate strictly\n"
+            "  on your local computer and private network. No video or telemetry is sent to external servers.\n\n"
+            "• Zero Developer Data Ingestion & Deletion Inapplicability:\n"
+            "  We do NOT collect, store, monetize, or transmit personal data or device identifiers.\n"
+            "  Because zero data is ingested by developers, data deletion on developer servers is not applicable.\n\n"
+            "• Third-Party, Store & OEM Disclaimers:\n"
+            "  Any telemetry collected by Google Play Services, Android OS, or device manufacturers\n"
+            "  (MIUI/HyperOS, ColorOS, Funtouch OS, One UI) is solely governed by their respective policies.\n\n"
+            "• Absolute Disclaimer of Warranties & Liability ('AS-IS'):\n"
+            "  The software is provided without warranties. Developers hold zero liability for local network\n"
+            "  interception, data loss, packet eavesdropping, hardware stress, or software bugs.\n\n"
+            "• Mandatory Attribution Clause:\n"
+            "  Any reuse, redistribution, or derivation must prominently credit 'spacecar', name 'Otter',\n"
+            "  and link to https://github.com/saprecar/Otter.\n\n"
+            "• Governing Law & Exclusive Jurisdiction:\n"
+            "  Governed by the Laws of the Republic of India (Information Technology Act, 2000).\n"
+            "  Exclusive jurisdiction: Competent Courts of Narmadapuram, Madhya Pradesh, India\n"
+            "  (PIN: 461001 / 461005)."
+        )
+        tk.Label(summary_box, text=summary_text, font=("Segoe UI", 9), fg="#C9D1D9", bg="#161B22", justify=tk.LEFT, anchor="w").pack(fill=tk.BOTH, expand=True)
+
+        links_frame = tk.Frame(card, bg="#161B22")
+        links_frame.pack(fill=tk.X, pady=(0, 14))
+
+        tk.Label(links_frame, text="Review Official Consolidated Policy Online (Markdown):", font=("Segoe UI", 9, "bold"), fg="#8B949E", bg="#161B22").pack(anchor="w", pady=(0, 6))
+
+        btn_links_row = tk.Frame(links_frame, bg="#161B22")
+        btn_links_row.pack(fill=tk.X)
+
+        ttk.Button(btn_links_row, text="Consolidated Master Policy", style="Blue.TButton", command=lambda: webbrowser.open(self.MASTER_POLICY_URL)).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(btn_links_row, text="Attribution & Licenses", style="Blue.TButton", command=lambda: webbrowser.open(self.ATTRIBUTION_URL)).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(btn_links_row, text="Open Source License", style="Dark.TButton", command=lambda: webbrowser.open(self.LICENSE_URL)).pack(side=tk.LEFT)
+
+        action_frame = tk.Frame(card, bg="#161B22")
+        action_frame.pack(fill=tk.X, side=tk.BOTTOM)
+
+        def _on_accept():
+            try:
+                import json
+                with open(consent_path, "w", encoding="utf-8") as f:
+                    json.dump({"accepted_version": self.POLICY_VERSION, "timestamp": time.time()}, f)
+            except Exception:
+                pass
+            dlg.destroy()
+
+        btn_accept = ttk.Button(action_frame, text="I Agree & Continue", style="Green.TButton", command=_on_accept)
+        btn_accept.pack(side=tk.RIGHT, padx=(8, 0))
+
+        btn_decline = ttk.Button(action_frame, text="Decline & Exit", style="Red.TButton", command=_on_decline)
+        btn_decline.pack(side=tk.RIGHT)
 
     def _setup_styles(self):
         style = ttk.Style()
@@ -64,6 +207,15 @@ class OtterApp:
 
         style.configure("Dark.TButton", font=("Segoe UI", 9), background="#21262D", foreground="#C9D1D9")
         style.map("Dark.TButton", background=[("active", "#30363D"), ("disabled", "#161B22")])
+
+        style.configure("Purple.TButton", font=("Segoe UI", 9, "bold"), background="#8957E5", foreground="#FFFFFF")
+        style.map("Purple.TButton", background=[("active", "#A371F7"), ("disabled", "#30363D")])
+
+        style.configure("Orange.TButton", font=("Segoe UI", 9, "bold"), background="#D29922", foreground="#FFFFFF")
+        style.map("Orange.TButton", background=[("active", "#E3B341"), ("disabled", "#30363D")])
+
+        style.configure("Cyan.TButton", font=("Segoe UI", 9, "bold"), background="#0366D6", foreground="#FFFFFF")
+        style.map("Cyan.TButton", background=[("active", "#2188FF"), ("disabled", "#30363D")])
 
     def _build_header(self):
         header_frame = tk.Frame(self.root, bg="#0D1117", pady=10, padx=16)
@@ -106,14 +258,33 @@ class OtterApp:
         self._build_about_tab()
 
     def _build_controls_tab(self):
-        main_box = tk.Frame(self.tab_controls, bg="#161B22", padx=14, pady=12)
-        main_box.pack(fill=tk.BOTH, expand=True)
+        container = tk.Frame(self.tab_controls, bg="#161B22")
+        container.pack(fill=tk.BOTH, expand=True)
 
-        # Connection Row
-        conn_frame = tk.LabelFrame(main_box, text=" Connection & Multi-Camera Settings ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=10, pady=8)
+        canvas = tk.Canvas(container, bg="#161B22", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg="#161B22", padx=12, pady=10)
+
+        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas_win = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        def _on_canvas_configure(event):
+            canvas.itemconfig(canvas_win, width=event.width)
+        canvas.bind("<Configure>", _on_canvas_configure)
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas.bind("<Enter>", lambda e: canvas.bind_all("<MouseWheel>", _on_mousewheel))
+        canvas.bind("<Leave>", lambda e: canvas.unbind_all("<MouseWheel>"))
+
+        # --- 1. Connection & Multi-Camera Settings ---
+        conn_frame = tk.LabelFrame(scrollable_frame, text=" Connection & Multi-Camera Settings ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=10, pady=8)
         conn_frame.pack(fill=tk.X, pady=(0, 10))
 
-        # Mode Selection & Virtual Camera Checkbox
         row1 = tk.Frame(conn_frame, bg="#161B22")
         row1.pack(fill=tk.X, pady=(0, 6))
 
@@ -128,13 +299,12 @@ class OtterApp:
         self.btn_auto_detect.pack(side=tk.LEFT, padx=(0, 12))
 
         self.vcam_var = tk.BooleanVar(value=True)
-        chk_vcam = tk.Checkbutton(row1, text="Virtual Camera", variable=self.vcam_var, bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22")
+        chk_vcam = tk.Checkbutton(row1, text="Virtual Camera (OBS/DirectShow)", variable=self.vcam_var, bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22")
         chk_vcam.pack(side=tk.LEFT, padx=(0, 12))
 
         self.btn_new_instance = ttk.Button(row1, text="+ Multi-Cam Instance", style="Blue.TButton", command=self._spawn_new_instance)
         self.btn_new_instance.pack(side=tk.RIGHT, padx=2)
 
-        # IP, Port, Camera Name & Action Buttons Row
         row2 = tk.Frame(conn_frame, bg="#161B22")
         row2.pack(fill=tk.X)
 
@@ -166,73 +336,283 @@ class OtterApp:
         self.btn_stop.configure(state=tk.DISABLED)
         self.btn_stop.pack(side=tk.RIGHT, padx=4)
 
-        # Camera Controls Row
-        cam_frame = tk.LabelFrame(main_box, text=" Remote Camera Controls ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=10, pady=8)
+        # --- 2. Quick Modes (One-Click Presets) ---
+        qm_frame = tk.LabelFrame(scrollable_frame, text=" Quick Modes (One-Click Presets) ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=10, pady=8)
+        qm_frame.pack(fill=tk.X, pady=(0, 10))
+
+        qm_grid = tk.Frame(qm_frame, bg="#161B22")
+        qm_grid.pack(fill=tk.X)
+
+        btn_qm_meetings = ttk.Button(qm_grid, text="Meetings", style="Green.TButton", command=lambda: self.apply_quick_mode("meetings"))
+        btn_qm_meetings.pack(side=tk.LEFT, padx=3, pady=2, expand=True, fill=tk.X)
+
+        btn_qm_class = ttk.Button(qm_grid, text="Online Class", style="Blue.TButton", command=lambda: self.apply_quick_mode("class"))
+        btn_qm_class.pack(side=tk.LEFT, padx=3, pady=2, expand=True, fill=tk.X)
+
+        btn_qm_stream = ttk.Button(qm_grid, text="Streaming", style="Purple.TButton", command=lambda: self.apply_quick_mode("streaming"))
+        btn_qm_stream.pack(side=tk.LEFT, padx=3, pady=2, expand=True, fill=tk.X)
+
+        btn_qm_snapshot = ttk.Button(qm_grid, text="Snapshot", style="Orange.TButton", command=lambda: self.apply_quick_mode("snapshot"))
+        btn_qm_snapshot.pack(side=tk.LEFT, padx=3, pady=2, expand=True, fill=tk.X)
+
+        btn_qm_scan = ttk.Button(qm_grid, text="Scan / OCR", style="Cyan.TButton", command=lambda: self.apply_quick_mode("scan"))
+        btn_qm_scan.pack(side=tk.LEFT, padx=3, pady=2, expand=True, fill=tk.X)
+
+        btn_qm_sec = ttk.Button(qm_grid, text="Security", style="Dark.TButton", command=lambda: self.apply_quick_mode("security"))
+        btn_qm_sec.pack(side=tk.LEFT, padx=3, pady=2, expand=True, fill=tk.X)
+
+        btn_qm_fun = ttk.Button(qm_grid, text="Fun Filter", style="Green.TButton", command=lambda: self.apply_quick_mode("fun"))
+        btn_qm_fun.pack(side=tk.LEFT, padx=3, pady=2, expand=True, fill=tk.X)
+
+        btn_qm_pro = ttk.Button(qm_grid, text="Pro Reset", style="Dark.TButton", command=lambda: self.apply_quick_mode("pro"))
+        btn_qm_pro.pack(side=tk.LEFT, padx=3, pady=2, expand=True, fill=tk.X)
+
+        # --- 3. Camera Hardware Controls & Format ---
+        cam_frame = tk.LabelFrame(scrollable_frame, text=" Remote Camera Hardware & Format ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=10, pady=8)
         cam_frame.pack(fill=tk.X, pady=(0, 10))
 
         btn_grid = tk.Frame(cam_frame, bg="#161B22")
-        btn_grid.pack(fill=tk.X)
+        btn_grid.pack(fill=tk.X, pady=(0, 6))
 
         self.btn_flip = ttk.Button(btn_grid, text="Flip Lens (Front/Rear)", style="Dark.TButton", command=self.flip_camera)
-        self.btn_flip.pack(side=tk.LEFT, padx=4, pady=4)
+        self.btn_flip.pack(side=tk.LEFT, padx=3, pady=2)
 
         self.btn_mirror = ttk.Button(btn_grid, text="Mirror: OFF", style="Dark.TButton", command=self.toggle_mirror)
-        self.btn_mirror.pack(side=tk.LEFT, padx=4, pady=4)
+        self.btn_mirror.pack(side=tk.LEFT, padx=3, pady=2)
 
         self.btn_rotate = ttk.Button(btn_grid, text="Rotate: 0°", style="Dark.TButton", command=self.rotate_camera)
-        self.btn_rotate.pack(side=tk.LEFT, padx=4, pady=4)
+        self.btn_rotate.pack(side=tk.LEFT, padx=3, pady=2)
 
         self.btn_torch = ttk.Button(btn_grid, text="Torch: Cycle", style="Dark.TButton", command=self.toggle_torch)
-        self.btn_torch.pack(side=tk.LEFT, padx=4, pady=4)
+        self.btn_torch.pack(side=tk.LEFT, padx=3, pady=2)
 
         self.btn_glow = ttk.Button(btn_grid, text="Front Glow: Cycle", style="Dark.TButton", command=self.toggle_glow)
-        self.btn_glow.pack(side=tk.LEFT, padx=4, pady=4)
+        self.btn_glow.pack(side=tk.LEFT, padx=3, pady=2)
 
-        tk.Label(btn_grid, text="Resolution:", bg="#161B22", fg="#8B949E").pack(side=tk.LEFT, padx=(12, 4))
-        self.res_combo = ttk.Combobox(btn_grid, values=["1080p (1920x1080)", "720p (1280x720)", "480p (640x480)", "360p (640x360)"], state="readonly", width=16)
+        self.btn_ultra_photo = ttk.Button(btn_grid, text="Ultra Photo (Full Res)", style="Orange.TButton", command=self.capture_ultra_photo)
+        self.btn_ultra_photo.pack(side=tk.LEFT, padx=3, pady=2)
+
+        fmt_row = tk.Frame(cam_frame, bg="#161B22")
+        fmt_row.pack(fill=tk.X)
+
+        tk.Label(fmt_row, text="Resolution:", bg="#161B22", fg="#8B949E").pack(side=tk.LEFT, padx=(0, 4))
+        self.res_combo = ttk.Combobox(fmt_row, values=["4K (3840x2160)", "1080p (1920x1080)", "720p (1280x720)", "480p (640x480)", "360p (640x360)"], state="readonly", width=18)
         self.res_combo.set("720p (1280x720)")
-        self.res_combo.pack(side=tk.LEFT, padx=4)
+        self.res_combo.pack(side=tk.LEFT, padx=(0, 14))
         self.res_combo.bind("<<ComboboxSelected>>", self.on_res_change)
 
-        zoom_box = tk.Frame(cam_frame, bg="#161B22", pady=4)
-        zoom_box.pack(fill=tk.X)
+        tk.Label(fmt_row, text="Target FPS:", bg="#161B22", fg="#8B949E").pack(side=tk.LEFT, padx=(0, 4))
+        self.fps_combo = ttk.Combobox(fmt_row, values=["60 FPS", "30 FPS", "15 FPS"], state="readonly", width=10)
+        self.fps_combo.set("30 FPS")
+        self.fps_combo.pack(side=tk.LEFT, padx=(0, 14))
+        self.fps_combo.bind("<<ComboboxSelected>>", self.on_fps_change)
 
-        tk.Label(zoom_box, text="Zoom:", bg="#161B22", fg="#8B949E").pack(side=tk.LEFT, padx=(0, 8))
-        self.lbl_zoom = tk.Label(zoom_box, text="1.0x", font=("Segoe UI", 10, "bold"), fg="#58A6FF", bg="#161B22", width=6)
+        # --- 4. Zoom Controls (with Slider AND +/- buttons!) ---
+        zoom_frame = tk.LabelFrame(scrollable_frame, text=" Zoom Controls (+/- Buttons & Slider) ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=10, pady=8)
+        zoom_frame.pack(fill=tk.X, pady=(0, 10))
+
+        zoom_row = tk.Frame(zoom_frame, bg="#161B22")
+        zoom_row.pack(fill=tk.X)
+
+        btn_zoom_out = ttk.Button(zoom_row, text="Zoom Out (-)", style="Dark.TButton", command=self.zoom_out)
+        btn_zoom_out.pack(side=tk.LEFT, padx=(0, 8))
+
+        self.slider_zoom = tk.Scale(
+            zoom_row,
+            from_=1.0,
+            to=8.0,
+            resolution=0.1,
+            orient=tk.HORIZONTAL,
+            length=340,
+            bg="#161B22",
+            fg="#58A6FF",
+            troughcolor="#0D1117",
+            activebackground="#1F6FEB",
+            highlightthickness=0,
+            bd=0,
+            sliderrelief=tk.FLAT,
+            showvalue=False,
+            command=self._on_zoom_slide
+        )
+        self.slider_zoom.set(1.0)
+        self.slider_zoom.pack(side=tk.LEFT, padx=4)
+
+        btn_zoom_in = ttk.Button(zoom_row, text="Zoom In (+)", style="Dark.TButton", command=self.zoom_in)
+        btn_zoom_in.pack(side=tk.LEFT, padx=(8, 12))
+
+        self.lbl_zoom = tk.Label(zoom_row, text="1.0x", font=("Segoe UI", 11, "bold"), fg="#58A6FF", bg="#161B22", width=6)
         self.lbl_zoom.pack(side=tk.LEFT)
 
-        btn_zoom_in = ttk.Button(zoom_box, text="Zoom In (+)", style="Dark.TButton", command=self.zoom_in)
-        btn_zoom_in.pack(side=tk.LEFT, padx=4)
+        # --- 5. Pro Manual Sliders & Auto Controls ---
+        pro_frame = tk.LabelFrame(scrollable_frame, text=" Pro Camera Controls & Auto Sliders ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=10, pady=8)
+        pro_frame.pack(fill=tk.X, pady=(0, 10))
 
-        btn_zoom_out = ttk.Button(zoom_box, text="Zoom Out (-)", style="Dark.TButton", command=self.zoom_out)
-        btn_zoom_out.pack(side=tk.LEFT, padx=4)
+        # ISO Row
+        iso_row = tk.Frame(pro_frame, bg="#161B22")
+        iso_row.pack(fill=tk.X, pady=3)
 
-        # Focus & Exposure Controls Row
-        manual_box = tk.Frame(cam_frame, bg="#161B22", pady=4)
-        manual_box.pack(fill=tk.X)
+        tk.Label(iso_row, text="ISO:", font=("Segoe UI", 9, "bold"), fg="#C9D1D9", bg="#161B22", width=11, anchor="w").pack(side=tk.LEFT)
+        chk_iso = tk.Checkbutton(iso_row, text="Auto ISO", variable=self.iso_auto_var, bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22", command=self._toggle_iso_auto)
+        chk_iso.pack(side=tk.LEFT, padx=(0, 10))
 
-        self.btn_af = ttk.Button(manual_box, text="AF: Auto", style="Green.TButton", command=self.toggle_af)
+        self.slider_iso = tk.Scale(
+            iso_row,
+            from_=0,
+            to=len(self.ISO_VALUES) - 1,
+            resolution=1,
+            orient=tk.HORIZONTAL,
+            length=260,
+            bg="#161B22",
+            fg="#58A6FF",
+            troughcolor="#0D1117",
+            activebackground="#1F6FEB",
+            highlightthickness=0,
+            bd=0,
+            sliderrelief=tk.FLAT,
+            showvalue=False,
+            state=tk.DISABLED,
+            command=self._on_iso_slide
+        )
+        self.slider_iso.set(1)
+        self.slider_iso.pack(side=tk.LEFT, padx=4)
+
+        self.lbl_iso_val = tk.Label(iso_row, text="Auto", font=("Segoe UI", 9, "bold"), fg="#8B949E", bg="#161B22", width=14, anchor="w")
+        self.lbl_iso_val.pack(side=tk.LEFT, padx=(6, 0))
+
+        # Shutter Row
+        shutter_row = tk.Frame(pro_frame, bg="#161B22")
+        shutter_row.pack(fill=tk.X, pady=3)
+
+        tk.Label(shutter_row, text="Shutter:", font=("Segoe UI", 9, "bold"), fg="#C9D1D9", bg="#161B22", width=11, anchor="w").pack(side=tk.LEFT)
+        chk_shutter = tk.Checkbutton(shutter_row, text="Auto Shutter", variable=self.shutter_auto_var, bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22", command=self._toggle_shutter_auto)
+        chk_shutter.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.slider_shutter = tk.Scale(
+            shutter_row,
+            from_=0,
+            to=len(self.SHUTTER_STEPS) - 1,
+            resolution=1,
+            orient=tk.HORIZONTAL,
+            length=260,
+            bg="#161B22",
+            fg="#58A6FF",
+            troughcolor="#0D1117",
+            activebackground="#1F6FEB",
+            highlightthickness=0,
+            bd=0,
+            sliderrelief=tk.FLAT,
+            showvalue=False,
+            state=tk.DISABLED,
+            command=self._on_shutter_slide
+        )
+        self.slider_shutter.set(4)
+        self.slider_shutter.pack(side=tk.LEFT, padx=4)
+
+        self.lbl_shutter_val = tk.Label(shutter_row, text="Auto", font=("Segoe UI", 9, "bold"), fg="#8B949E", bg="#161B22", width=14, anchor="w")
+        self.lbl_shutter_val.pack(side=tk.LEFT, padx=(6, 0))
+
+        # White Balance Row
+        wb_row = tk.Frame(pro_frame, bg="#161B22")
+        wb_row.pack(fill=tk.X, pady=3)
+
+        tk.Label(wb_row, text="White Bal:", font=("Segoe UI", 9, "bold"), fg="#C9D1D9", bg="#161B22", width=11, anchor="w").pack(side=tk.LEFT)
+        chk_wb = tk.Checkbutton(wb_row, text="Auto AWB", variable=self.wb_auto_var, bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22", command=self._toggle_wb_auto)
+        chk_wb.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.slider_wb = tk.Scale(
+            wb_row,
+            from_=0,
+            to=len(self.WB_MODES) - 1,
+            resolution=1,
+            orient=tk.HORIZONTAL,
+            length=260,
+            bg="#161B22",
+            fg="#58A6FF",
+            troughcolor="#0D1117",
+            activebackground="#1F6FEB",
+            highlightthickness=0,
+            bd=0,
+            sliderrelief=tk.FLAT,
+            showvalue=False,
+            state=tk.DISABLED,
+            command=self._on_wb_slide
+        )
+        self.slider_wb.set(0)
+        self.slider_wb.pack(side=tk.LEFT, padx=4)
+
+        self.lbl_wb_val = tk.Label(wb_row, text="Auto (AWB)", font=("Segoe UI", 9, "bold"), fg="#8B949E", bg="#161B22", width=18, anchor="w")
+        self.lbl_wb_val.pack(side=tk.LEFT, padx=(6, 0))
+
+        # Color FX Row
+        fx_row = tk.Frame(pro_frame, bg="#161B22")
+        fx_row.pack(fill=tk.X, pady=3)
+
+        tk.Label(fx_row, text="Color FX:", font=("Segoe UI", 9, "bold"), fg="#C9D1D9", bg="#161B22", width=11, anchor="w").pack(side=tk.LEFT)
+        chk_fx = tk.Checkbutton(fx_row, text="Normal FX", variable=self.fx_auto_var, bg="#161B22", fg="#C9D1D9", selectcolor="#0D1117", activebackground="#161B22", command=self._toggle_fx_auto)
+        chk_fx.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.slider_fx = tk.Scale(
+            fx_row,
+            from_=0,
+            to=len(self.FX_MODES) - 1,
+            resolution=1,
+            orient=tk.HORIZONTAL,
+            length=260,
+            bg="#161B22",
+            fg="#58A6FF",
+            troughcolor="#0D1117",
+            activebackground="#1F6FEB",
+            highlightthickness=0,
+            bd=0,
+            sliderrelief=tk.FLAT,
+            showvalue=False,
+            state=tk.DISABLED,
+            command=self._on_fx_slide
+        )
+        self.slider_fx.set(0)
+        self.slider_fx.pack(side=tk.LEFT, padx=4)
+
+        self.lbl_fx_val = tk.Label(fx_row, text="Normal Color", font=("Segoe UI", 9, "bold"), fg="#8B949E", bg="#161B22", width=18, anchor="w")
+        self.lbl_fx_val.pack(side=tk.LEFT, padx=(6, 0))
+
+        # Focus & Exposure Row
+        fe_row = tk.Frame(pro_frame, bg="#161B22")
+        fe_row.pack(fill=tk.X, pady=(6, 2))
+
+        self.btn_af = ttk.Button(fe_row, text="AF: Auto", style="Green.TButton", command=self.toggle_af)
         self.btn_af.pack(side=tk.LEFT, padx=(0, 4))
 
-        self.btn_focus_dist = ttk.Button(manual_box, text="Focus: Auto", style="Dark.TButton", command=self.cycle_focus)
+        self.btn_focus_dist = ttk.Button(fe_row, text="Focus: Auto", style="Dark.TButton", command=self.cycle_focus)
         self.btn_focus_dist.pack(side=tk.LEFT, padx=4)
 
-        self.btn_ev = ttk.Button(manual_box, text="EV: 0", style="Dark.TButton", command=self.cycle_ev)
-        self.btn_ev.pack(side=tk.LEFT, padx=4)
+        btn_ev_minus = ttk.Button(fe_row, text="EV (-)", style="Dark.TButton", command=lambda: self.ev_step(-1))
+        btn_ev_minus.pack(side=tk.LEFT, padx=(8, 2))
 
-        self.btn_sync_status = ttk.Button(manual_box, text="Sync State", style="Blue.TButton", command=self.sync_remote_status)
-        self.btn_sync_status.pack(side=tk.LEFT, padx=4)
+        self.lbl_ev = tk.Label(fe_row, text="EV: +0.0", font=("Segoe UI", 9, "bold"), fg="#58A6FF", bg="#161B22", width=9)
+        self.lbl_ev.pack(side=tk.LEFT)
 
-        # Log Frame
-        log_frame = tk.LabelFrame(main_box, text=" Event & Connection Log ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=8, pady=6)
+        btn_ev_plus = ttk.Button(fe_row, text="EV (+)", style="Dark.TButton", command=lambda: self.ev_step(1))
+        btn_ev_plus.pack(side=tk.LEFT, padx=(2, 8))
+
+        self.btn_sync_status = ttk.Button(fe_row, text="Sync State", style="Blue.TButton", command=self.sync_remote_status)
+        self.btn_sync_status.pack(side=tk.RIGHT, padx=4)
+
+        # --- 6. Event & Connection Log ---
+        log_frame = tk.LabelFrame(scrollable_frame, text=" Event & Connection Log ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=8, pady=6)
         log_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.log_text = tk.Text(log_frame, bg="#0D1117", fg="#8B949E", insertbackground="#C9D1D9", font=("Consolas", 9), relief=tk.FLAT)
+        log_inner = tk.Frame(log_frame, bg="#0D1117")
+        log_inner.pack(fill=tk.BOTH, expand=True)
+
+        self.log_text = tk.Text(log_inner, height=7, bg="#0D1117", fg="#8B949E", insertbackground="#C9D1D9", font=("Consolas", 9), relief=tk.FLAT)
         self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        scrollbar = ttk.Scrollbar(log_frame, orient=tk.VERTICAL, command=self.log_text.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.log_text.config(yscrollcommand=scrollbar.set)
+        scrollbar_log = ttk.Scrollbar(log_inner, orient=tk.VERTICAL, command=self.log_text.yview)
+        scrollbar_log.pack(side=tk.RIGHT, fill=tk.Y)
+        self.log_text.config(yscrollcommand=scrollbar_log.set)
+
+        btn_clear_log = ttk.Button(log_frame, text="Clear Log", style="Dark.TButton", command=lambda: self.log_text.delete("1.0", tk.END))
+        btn_clear_log.pack(side=tk.RIGHT, pady=(4, 0))
 
         self.log("Otter Virtual Camera Controller initialized.")
         self.log("Ready. Plug in Android device via USB with USB Debugging enabled, then click 'Connect & Start'.")
@@ -633,7 +1013,7 @@ class OtterApp:
             "Manual Installation via Terminal:\n\n"
             "1. Open Command Prompt or PowerShell.\n"
             "2. Run:\n\n"
-            "pip install -r Dev/desktop/requirements.txt\n\n"
+            "pip install -r requirements.txt\n\n"
             "OR install individually:\n"
             "pip install opencv-python numpy\n\n"
             "To uninstall later:\n"
@@ -665,6 +1045,23 @@ class OtterApp:
 
         btn_copy = ttk.Button(btn_box, text="Copy Repo Link", style="Dark.TButton", command=self._copy_repo_link)
         btn_copy.pack(side=tk.LEFT)
+
+        legal_frame = tk.LabelFrame(about_box, text=" Universal Policies, Agreements & Attribution ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=12, pady=10)
+        legal_frame.pack(fill=tk.X, pady=(0, 12))
+
+        legal_summary = (
+            "Otter operates on a 100% local peer-to-peer architecture with zero developer data retention.\n"
+            "Governing Law: Republic of India | Jurisdiction: Competent Courts of Narmadapuram, Madhya Pradesh, India (PIN: 461001 / 461005).\n"
+            "Official Contact: getspacecar@gmail.com (Mandatory subject line: '[Otter-Legal]' or '[Otter-Inquiry]')."
+        )
+        tk.Label(legal_frame, text=legal_summary, bg="#161B22", fg="#8B949E", font=("Segoe UI", 9), justify=tk.LEFT, anchor="w").pack(fill=tk.X, pady=(0, 8))
+
+        legal_btn_box = tk.Frame(legal_frame, bg="#161B22")
+        legal_btn_box.pack(fill=tk.X)
+
+        ttk.Button(legal_btn_box, text="Consolidated Master Policy", style="Blue.TButton", command=lambda: webbrowser.open(self.MASTER_POLICY_URL)).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(legal_btn_box, text="Attribution & Licenses", style="Blue.TButton", command=lambda: webbrowser.open(self.ATTRIBUTION_URL)).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(legal_btn_box, text="Open Source License", style="Dark.TButton", command=lambda: webbrowser.open(self.LICENSE_URL)).pack(side=tk.LEFT)
 
         lic_frame = tk.LabelFrame(about_box, text=" License & Permissive Open Source Terms ", bg="#161B22", fg="#58A6FF", font=("Segoe UI", 10, "bold"), padx=12, pady=10)
         lic_frame.pack(fill=tk.BOTH, expand=True)
@@ -836,15 +1233,34 @@ class OtterApp:
             self.adb_tunnel.remove_forward()
         self._on_receiver_stopped()
 
+    def _get_active_host(self):
+        if self.conn_mode.get() == "usb":
+            return "127.0.0.1"
+        return self.entry_ip.get().strip() or "127.0.0.1"
+
+    def _get_active_ctrl_port(self):
+        try:
+            return int(self.entry_ctrl_port.get().strip())
+        except Exception:
+            return 8090
+
+    def _debounce(self, key, delay_ms, func):
+        if key in self._debounce_timers:
+            try:
+                self.root.after_cancel(self._debounce_timers[key])
+            except Exception:
+                pass
+        self._debounce_timers[key] = self.root.after(delay_ms, func)
+
     def flip_camera(self):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.switch_camera()
         self.log(f"Flip Camera sent: {res}")
 
     def toggle_mirror(self):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.toggle_mirror()
         self.is_mirrored = not self.is_mirrored
         self.btn_mirror.configure(text=f"Mirror: {'ON' if self.is_mirrored else 'OFF'}")
@@ -852,7 +1268,7 @@ class OtterApp:
 
     def rotate_camera(self):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.rotate_camera()
         angle = res.get("rotationAngle", 0)
         self.btn_rotate.configure(text=f"Rotate: {angle}°")
@@ -862,54 +1278,240 @@ class OtterApp:
 
     def toggle_torch(self):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.toggle_torch()
         self.log(f"Toggle Torch: {res}")
 
     def toggle_glow(self):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.toggle_glow()
         glow_name = res.get("glowName", "Cycle")
         self.btn_glow.configure(text=f"Front Glow: {glow_name}")
         self.log(f"Toggle Screen Glow: {res}")
 
+    def capture_ultra_photo(self):
+        if not self.controller:
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+        res = self.controller.capture_still()
+        self.log(f"Capture Ultra Photo (Full Res): {res}")
+
     def on_res_change(self, event=None):
         res_str = self.res_combo.get()
         w, h = 1280, 720
-        if "1920" in res_str:
+        if "3840" in res_str or "4K" in res_str:
+            w, h = 3840, 2160
+        elif "1920" in res_str or "1080p" in res_str:
             w, h = 1920, 1080
-        elif "640x480" in res_str:
+        elif "1280" in res_str or "720p" in res_str:
+            w, h = 1280, 720
+        elif "640x480" in res_str or "480p" in res_str:
             w, h = 640, 480
-        elif "640x360" in res_str:
+        elif "640x360" in res_str or "360p" in res_str:
             w, h = 640, 360
 
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.set_resolution(w, h)
         self.log(f"Set Resolution to {w}x{h}: {res}")
 
+    def on_fps_change(self, event=None):
+        fps_str = self.fps_combo.get()
+        fps = 30
+        if "60" in fps_str:
+            fps = 60
+        elif "15" in fps_str:
+            fps = 15
+        if not self.controller:
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+        res = self.controller.set_fps(fps)
+        self.log(f"Set Target FPS to {fps}: {res}")
+
+    # Zoom controls (+/- Buttons and Slider)
+    def _on_zoom_slide(self, val):
+        z = float(val)
+        self.current_zoom = z
+        self.lbl_zoom.configure(text=f"{z:.1f}x")
+        self._debounce("zoom", 80, lambda: self._send_zoom(z))
+
+    def _send_zoom(self, z):
+        if not self.controller:
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+        res = self.controller.set_zoom(z)
+        self.log(f"Set Zoom to {z:.1f}x: {res}")
+
     def zoom_in(self):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.zoom_in()
         if res.get("status") == "ok":
             self.current_zoom = res.get("zoom", self.current_zoom)
             self.lbl_zoom.configure(text=f"{self.current_zoom:.1f}x")
-        self.log(f"Zoom In: {res}")
+            self.slider_zoom.set(self.current_zoom)
+        self.log(f"Zoom In (+): {res}")
 
     def zoom_out(self):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.zoom_out()
         if res.get("status") == "ok":
             self.current_zoom = res.get("zoom", self.current_zoom)
             self.lbl_zoom.configure(text=f"{self.current_zoom:.1f}x")
-        self.log(f"Zoom Out: {res}")
+            self.slider_zoom.set(self.current_zoom)
+        self.log(f"Zoom Out (-): {res}")
 
+    # Pro Controls: ISO
+    def _toggle_iso_auto(self):
+        is_auto = self.iso_auto_var.get()
+        if is_auto:
+            self.slider_iso.configure(state=tk.DISABLED)
+            self.lbl_iso_val.configure(text="Auto", fg="#8B949E")
+            if not self.controller:
+                self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+            res = self.controller.set_iso(0)
+            self.log(f"Set ISO to Auto: {res}")
+        else:
+            self.slider_iso.configure(state=tk.NORMAL)
+            idx = int(round(self.slider_iso.get()))
+            iso_val = self.ISO_VALUES[idx]
+            self.lbl_iso_val.configure(text=f"ISO {iso_val}", fg="#58A6FF")
+            if not self.controller:
+                self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+            res = self.controller.set_iso(iso_val)
+            self.log(f"Set ISO to {iso_val}: {res}")
+
+    def _on_iso_slide(self, val):
+        if self.iso_auto_var.get():
+            return
+        idx = int(round(float(val)))
+        if 0 <= idx < len(self.ISO_VALUES):
+            iso_val = self.ISO_VALUES[idx]
+            self.lbl_iso_val.configure(text=f"ISO {iso_val}", fg="#58A6FF")
+            self._debounce("iso", 100, lambda: self._send_iso(iso_val))
+
+    def _send_iso(self, iso_val):
+        if not self.controller:
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+        res = self.controller.set_iso(iso_val)
+        self.log(f"Set ISO to {iso_val}: {res}")
+
+    # Pro Controls: Shutter Speed
+    def _toggle_shutter_auto(self):
+        is_auto = self.shutter_auto_var.get()
+        if is_auto:
+            self.slider_shutter.configure(state=tk.DISABLED)
+            self.lbl_shutter_val.configure(text="Auto", fg="#8B949E")
+            if not self.controller:
+                self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+            res = self.controller.set_shutter(0)
+            self.log(f"Set Shutter to Auto: {res}")
+        else:
+            self.slider_shutter.configure(state=tk.NORMAL)
+            idx = int(round(self.slider_shutter.get()))
+            ns, label = self.SHUTTER_STEPS[idx]
+            self.lbl_shutter_val.configure(text=label, fg="#58A6FF")
+            if not self.controller:
+                self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+            res = self.controller.set_shutter(ns)
+            self.log(f"Set Shutter to {label}: {res}")
+
+    def _on_shutter_slide(self, val):
+        if self.shutter_auto_var.get():
+            return
+        idx = int(round(float(val)))
+        if 0 <= idx < len(self.SHUTTER_STEPS):
+            ns, label = self.SHUTTER_STEPS[idx]
+            self.lbl_shutter_val.configure(text=label, fg="#58A6FF")
+            self._debounce("shutter", 100, lambda: self._send_shutter(ns, label))
+
+    def _send_shutter(self, ns, label):
+        if not self.controller:
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+        res = self.controller.set_shutter(ns)
+        self.log(f"Set Shutter to {label}: {res}")
+
+    # Pro Controls: White Balance (WB)
+    def _toggle_wb_auto(self):
+        is_auto = self.wb_auto_var.get()
+        if is_auto:
+            self.slider_wb.configure(state=tk.DISABLED)
+            self.lbl_wb_val.configure(text="Auto (AWB)", fg="#8B949E")
+            if not self.controller:
+                self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+            res = self.controller.set_awb(0)
+            self.log(f"Set WB to Auto: {res}")
+        else:
+            self.slider_wb.configure(state=tk.NORMAL)
+            idx = int(round(self.slider_wb.get()))
+            mode, label = self.WB_MODES[idx]
+            self.lbl_wb_val.configure(text=label, fg="#58A6FF")
+            if not self.controller:
+                self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+            res = self.controller.set_awb(mode)
+            self.log(f"Set WB to {label}: {res}")
+
+    def _on_wb_slide(self, val):
+        if self.wb_auto_var.get():
+            return
+        idx = int(round(float(val)))
+        if 0 <= idx < len(self.WB_MODES):
+            mode, label = self.WB_MODES[idx]
+            self.lbl_wb_val.configure(text=label, fg="#58A6FF")
+            self._debounce("wb", 100, lambda: self._send_wb(mode, label))
+
+    def _send_wb(self, mode, label):
+        if not self.controller:
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+        res = self.controller.set_awb(mode)
+        self.log(f"Set WB to {label}: {res}")
+
+    # Pro Controls: Color FX / Filters
+    def _toggle_fx_auto(self):
+        is_auto = self.fx_auto_var.get()
+        if is_auto:
+            self.slider_fx.configure(state=tk.DISABLED)
+            self.lbl_fx_val.configure(text="Normal Color", fg="#8B949E")
+            if not self.controller:
+                self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+            res = self.controller.set_effect(0)
+            self.log(f"Set Color FX to Normal: {res}")
+        else:
+            self.slider_fx.configure(state=tk.NORMAL)
+            idx = int(round(self.slider_fx.get()))
+            fx_mode, label = self.FX_MODES[idx]
+            self.lbl_fx_val.configure(text=label, fg="#58A6FF")
+            if not self.controller:
+                self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+            res = self.controller.set_effect(fx_mode)
+            self.log(f"Set Color FX to {label}: {res}")
+
+    def _on_fx_slide(self, val):
+        if self.fx_auto_var.get():
+            return
+        idx = int(round(float(val)))
+        if 0 <= idx < len(self.FX_MODES):
+            fx_mode, label = self.FX_MODES[idx]
+            self.lbl_fx_val.configure(text=label, fg="#58A6FF")
+            self._debounce("fx", 100, lambda: self._send_fx(fx_mode, label))
+
+    def _send_fx(self, fx_mode, label):
+        if not self.controller:
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+        res = self.controller.set_effect(fx_mode)
+        self.log(f"Set Color FX to {label}: {res}")
+
+    # Pro Controls: EV Exposure Compensation
+    def ev_step(self, delta: int):
+        if not self.controller:
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+        res = self.controller.send_command({"action": "ev_step", "delta": delta})
+        self.sync_remote_status()
+        self.log(f"EV Step {delta:+d}: {res}")
+
+    # Focus Controls
     def toggle_af(self):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.toggle_af()
         is_af = res.get("isAutoFocus", True)
         self.btn_af.configure(text="AF: Auto" if is_af else "AF: Manual", style="Green.TButton" if is_af else "Blue.TButton")
@@ -918,7 +1520,7 @@ class OtterApp:
 
     def cycle_focus(self):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.cycle_focus()
         dist = res.get("focusDistance", 0.0)
         self.btn_af.configure(text="AF: Manual", style="Blue.TButton")
@@ -929,53 +1531,47 @@ class OtterApp:
         self.log(f"Cycle Focus Distance: {res}")
 
     def cycle_ev(self):
+        self.ev_step(1)
+
+    # Quick Mode presets
+    def apply_quick_mode(self, mode: str):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
-        res = self.controller.cycle_exposure()
-        exp_comp = res.get("exposureCompensation", 0)
-        self.btn_ev.configure(text=f"EV: {exp_comp:+d}")
-        self.log(f"Cycle Exposure: {res}")
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
+        res = self.controller.set_quick_mode(mode)
+        self.log(f"Applied Quick Mode '{mode.upper()}': {res}")
+        self.root.after(300, self.sync_remote_status)
 
     def sync_remote_status(self):
         if not self.controller:
-            self.controller = CamBridgeControl(host="127.0.0.1", port=8090)
+            self.controller = CamBridgeControl(host=self._get_active_host(), port=self._get_active_ctrl_port())
         res = self.controller.get_status()
         if res.get("status") == "ok":
-            is_af = res.get("isAutoFocus", True)
-            self.btn_af.configure(text="AF: Auto" if is_af else "AF: Manual", style="Green.TButton" if is_af else "Blue.TButton")
-            dist = res.get("focusDistance", 0.0)
-            if is_af:
-                self.btn_focus_dist.configure(text="Focus: Auto")
-            elif dist <= 0.05:
-                self.btn_focus_dist.configure(text="Focus: Inf")
-            else:
-                self.btn_focus_dist.configure(text=f"Focus: {dist:.1f}D")
-            
-            ev = res.get("ev", 0.0)
-            self.btn_ev.configure(text=f"EV: {ev:+.1f}")
-            
-            zoom = res.get("zoom", 1.0)
-            self.current_zoom = zoom
-            self.lbl_zoom.configure(text=f"{zoom:.1f}x")
-            
-            lens = res.get("lens", "BACK")
-            self.btn_flip.configure(text=f"Flip ({lens})")
-            
-            mirrored = res.get("mirrored", False)
-            self.is_mirrored = mirrored
-            self.btn_mirror.configure(text=f"Mirror: {'ON' if mirrored else 'OFF'}")
-            
-            glow = res.get("glowName", "OFF")
-            self.btn_glow.configure(text=f"Front Glow: {glow}")
-            
-            angle = res.get("rotationAngle")
-            if angle is not None:
-                self.btn_rotate.configure(text=f"Rotate: {angle}°")
-                if self.receiver and self.receiver.rotation_angle != angle:
-                    self.receiver.set_rotation(angle)
+            self._apply_synced_status(res)
             self.log(f"Synced Device Status: {res}")
         else:
             self.log(f"Sync failed: {res}")
+
+        try:
+            caps = self.controller.get_capabilities()
+            if caps.get("status") == "ok":
+                res_list = caps.get("resolutions", [])
+                if res_list:
+                    current_res = self.res_combo.get()
+                    self.res_combo.configure(values=res_list)
+                    if current_res in res_list:
+                        self.res_combo.set(current_res)
+                fps_list = caps.get("fpsRanges", [])
+                if fps_list:
+                    fps_labels = [f"{f} FPS" for f in fps_list]
+                    current_fps = self.fps_combo.get()
+                    self.fps_combo.configure(values=fps_labels)
+                    if current_fps in fps_labels:
+                        self.fps_combo.set(current_fps)
+                max_z = caps.get("maxZoom")
+                if max_z and float(max_z) > 1.0:
+                    self.slider_zoom.configure(to=float(max_z))
+        except Exception:
+            pass
 
     def _poll_status_loop(self):
         while True:
@@ -990,6 +1586,7 @@ class OtterApp:
 
     def _apply_synced_status(self, r: dict):
         try:
+            # AF
             is_af = r.get("isAutoFocus", True)
             self.btn_af.configure(text="AF: Auto" if is_af else "AF: Manual", style="Green.TButton" if is_af else "Blue.TButton")
             dist = r.get("focusDistance", 0.0)
@@ -1000,21 +1597,89 @@ class OtterApp:
             else:
                 self.btn_focus_dist.configure(text=f"Focus: {dist:.1f}D")
 
+            # EV
             ev = r.get("ev", 0.0)
-            self.btn_ev.configure(text=f"EV: {ev:+.1f}")
+            self.lbl_ev.configure(text=f"EV: {ev:+.1f}")
 
+            # Zoom
             zoom = r.get("zoom", self.current_zoom)
             self.current_zoom = zoom
             self.lbl_zoom.configure(text=f"{zoom:.1f}x")
+            self.slider_zoom.set(zoom)
 
+            # Lens & Mirror & Rotation
             lens = r.get("lens", "BACK")
             self.btn_flip.configure(text=f"Flip ({lens})")
+
+            mirrored = r.get("mirrored", False)
+            self.is_mirrored = mirrored
+            self.btn_mirror.configure(text=f"Mirror: {'ON' if mirrored else 'OFF'}")
+
+            glow = r.get("glowName", "OFF")
+            self.btn_glow.configure(text=f"Front Glow: {glow}")
 
             angle = r.get("rotationAngle")
             if angle is not None:
                 self.btn_rotate.configure(text=f"Rotate: {angle}°")
                 if self.receiver and self.receiver.rotation_angle != angle:
                     self.receiver.set_rotation(angle)
+
+            # ISO sync
+            iso_val = r.get("iso", 0)
+            if iso_val == 0:
+                self.iso_auto_var.set(True)
+                self.slider_iso.configure(state=tk.DISABLED)
+                self.lbl_iso_val.configure(text="Auto", fg="#8B949E")
+            else:
+                self.iso_auto_var.set(False)
+                self.slider_iso.configure(state=tk.NORMAL)
+                closest_idx = min(range(len(self.ISO_VALUES)), key=lambda i: abs(self.ISO_VALUES[i] - iso_val))
+                self.slider_iso.set(closest_idx)
+                self.lbl_iso_val.configure(text=f"ISO {self.ISO_VALUES[closest_idx]}", fg="#58A6FF")
+
+            # Shutter sync
+            shutter_val = r.get("shutter", 0)
+            if shutter_val == 0:
+                self.shutter_auto_var.set(True)
+                self.slider_shutter.configure(state=tk.DISABLED)
+                self.lbl_shutter_val.configure(text="Auto", fg="#8B949E")
+            else:
+                self.shutter_auto_var.set(False)
+                self.slider_shutter.configure(state=tk.NORMAL)
+                closest_idx = min(range(len(self.SHUTTER_STEPS)), key=lambda i: abs(self.SHUTTER_STEPS[i][0] - shutter_val))
+                self.slider_shutter.set(closest_idx)
+                self.lbl_shutter_val.configure(text=self.SHUTTER_STEPS[closest_idx][1], fg="#58A6FF")
+
+            # AWB sync
+            awb_str = r.get("awb", "Auto")
+            if awb_str == "Auto":
+                self.wb_auto_var.set(True)
+                self.slider_wb.configure(state=tk.DISABLED)
+                self.lbl_wb_val.configure(text="Auto (AWB)", fg="#8B949E")
+            else:
+                self.wb_auto_var.set(False)
+                self.slider_wb.configure(state=tk.NORMAL)
+                for idx, (m, lbl) in enumerate(self.WB_MODES):
+                    if awb_str.lower() in lbl.lower():
+                        self.slider_wb.set(idx)
+                        self.lbl_wb_val.configure(text=lbl, fg="#58A6FF")
+                        break
+
+            # Effect sync
+            effect_str = r.get("effect", "Color")
+            if effect_str == "Color" or effect_str == "Off":
+                self.fx_auto_var.set(True)
+                self.slider_fx.configure(state=tk.DISABLED)
+                self.lbl_fx_val.configure(text="Normal Color", fg="#8B949E")
+            else:
+                self.fx_auto_var.set(False)
+                self.slider_fx.configure(state=tk.NORMAL)
+                for idx, (m, lbl) in enumerate(self.FX_MODES):
+                    if effect_str.lower() in lbl.lower():
+                        self.slider_fx.set(idx)
+                        self.lbl_fx_val.configure(text=lbl, fg="#58A6FF")
+                        break
+
         except Exception:
             pass
 

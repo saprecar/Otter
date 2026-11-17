@@ -76,25 +76,38 @@
 
 ### UI Layout
 ```
-+--------------------------------------------------------------+
-| Otter | Virtual Webcam & Remote Controller    [DISCONNECTED] |
-+--------------------------------------------------------------+
-| [ Controller ]     [ OBS & Discord Setup ]   [ About & License ]|
-+--------------------------------------------------------------+
-| Connection Settings:                                         |
-| (o) USB (ADB Auto-Tunnel)  ( ) Wi-Fi  [ IP: 192.168.1.X ]    |
-| [x] Virtual Camera        [ Connect & Start ]       [ Stop ] |
-|                                                              |
-| Remote Camera Controls:                                      |
-| [ Flip Lens ]  [ Mirror: OFF ]  Res: [ 720p v ]              |
-| Zoom: [ 1.0x ]  [ Zoom In (+) ]  [ Zoom Out (-) ]            |
-|                                                              |
-| Event & Connection Log:                                      |
-| [12:00:00] Otter Virtual Camera Controller initialized.      |
-| [12:00:01] Connected to Otter stream via USB.                |
-+--------------------------------------------------------------+
-| Otter Ready | MIT License | spacecar                         |
-+--------------------------------------------------------------+
++---------------------------------------------------------------------------------+
+| Otter | Virtual Webcam & Remote Controller                       [DISCONNECTED] |
++---------------------------------------------------------------------------------+
+| [ Controller ]     [ OBS & Discord Setup ]   [ Dependencies ]  [ About/License ]|
++---------------------------------------------------------------------------------+
+| Connection & Multi-Camera Settings:                                             |
+| (o) USB (ADB Auto-Tunnel)  ( ) Wi-Fi  [Auto Detect IP]  [x] Virtual Camera      |
+| IP: [127.0.0.1  ]  Stream: [8089]  Ctrl: [8090]  [ Connect & Start ]  [ Stop ]  |
+|                                                                                 |
+| Quick Modes (One-Click Presets):                                                |
+| [Meetings] [Online Class] [Streaming] [Snapshot] [Scan] [Security] [Fun] [Pro]  |
+|                                                                                 |
+| Remote Camera Hardware & Format:                                                |
+| [Flip Lens] [Mirror: OFF] [Rotate: 0°] [Torch: Cycle] [Ultra Photo (Full Res)]  |
+| Resolution: [ 720p (1280x720) v ]   Target FPS: [ 30 FPS v ]                    |
+|                                                                                 |
+| Zoom Controls (+/- Buttons & Slider):                                           |
+| [ Zoom Out (-) ]  [===|============== 1.0x - 8.0x ===]  [ Zoom In (+) ]  [1.0x] |
+|                                                                                 |
+| Pro Camera Controls & Auto Sliders:                                             |
+| ISO:       [x] Auto ISO     [====|============= ISO 100-3200 ===]  [ Auto     ] |
+| Shutter:   [x] Auto Shutter [====|============= 1/2000s-1/15s ==]  [ Auto     ] |
+| White Bal: [x] Auto AWB     [====|============= Daylight/Cloud =]  [ Auto(AWB)] |
+| Color FX:  [x] Normal FX    [====|============= B&W/Neg/Sepia ==]  [ Normal   ] |
+| [AF: Auto] [Focus: Auto]    [ EV (-) ]  [EV: +0.0]  [ EV (+) ]     [Sync State] |
+|                                                                                 |
+| Event & Connection Log:                                                         |
+| [12:00:00] Otter Virtual Camera Controller initialized.                         |
+| [12:00:01] Connected to Otter stream via USB.                                   |
++---------------------------------------------------------------------------------+
+| Otter Ready | MIT License | spacecar                                            |
++---------------------------------------------------------------------------------+
 ```
 
 ### Launching the Desktop UI (One-Click Launchers)

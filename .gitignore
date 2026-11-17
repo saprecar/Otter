@@ -61,7 +61,6 @@ requirement/Propose/
 .claude/
 .github/
 install_agent_skills.bat
-Stable/
 AGENTS.md
 GITHUB_STATE.md
 NAV_MAP.md

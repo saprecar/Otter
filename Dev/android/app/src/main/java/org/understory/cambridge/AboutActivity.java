@@ -17,6 +17,9 @@ import android.widget.Toast;
 public class AboutActivity extends Activity {
 
     private static final String REPO_URL = "https://github.com/saprecar/Otter";
+    private static final String POLICY_URL = "https://github.com/saprecar/Otter/blob/main/Policies%20And%20Agreement/POLICIES_AND_AGREEMENT.md";
+    private static final String ATTRIBUTION_URL = "https://github.com/saprecar/Otter/blob/main/Policies%20And%20Agreement/ATTRIBUTION_AND_LICENSES.md";
+    private static final String LICENSE_URL = "https://github.com/saprecar/Otter/blob/main/LICENSE";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,9 +29,29 @@ public class AboutActivity extends Activity {
         Button btnClose = findViewById(R.id.btnCloseAbout);
         Button btnOpenRepo = findViewById(R.id.btnOpenRepo);
         Button btnCopyRepo = findViewById(R.id.btnCopyRepo);
+        Button btnCopyPc = findViewById(R.id.btnCopyPcInstructions);
         Button btnOpenBattery = findViewById(R.id.btnOpenBatterySettings);
 
         btnClose.setOnClickListener(v -> finish());
+
+        if (btnCopyPc != null) {
+            btnCopyPc.setOnClickListener(v -> {
+                String instructions = "Otter PC Desktop Client Setup:\n" +
+                        "1. Download Otter on PC: " + REPO_URL + "\n" +
+                        "2. Click Code -> Download ZIP and extract on computer.\n" +
+                        "3. Run the one-click launcher:\n" +
+                        "   - Windows: double-click run_windows.bat\n" +
+                        "   - Linux: ./run_linux.sh\n" +
+                        "   - macOS: double-click run_macos.command\n" +
+                        "   - Or run: python Dev/desktop/otter_app.py\n" +
+                        "4. Click 'Connect & Start' on PC controller to register Virtual Webcam.";
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Otter PC Setup", instructions));
+                    Toast.makeText(this, "PC Setup instructions copied to clipboard!", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
 
         btnOpenRepo.setOnClickListener(v -> {
             try {
@@ -47,6 +70,39 @@ public class AboutActivity extends Activity {
                 Toast.makeText(this, "Repo link copied to clipboard!", Toast.LENGTH_SHORT).show();
             }
         });
+
+        Button btnPrivacy = findViewById(R.id.btnViewPrivacyPolicy);
+        if (btnPrivacy != null) {
+            btnPrivacy.setOnClickListener(v -> {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(POLICY_URL)));
+                } catch (Exception e) {
+                    Toast.makeText(this, "Could not open browser: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        Button btnTerms = findViewById(R.id.btnViewUserAgreement);
+        if (btnTerms != null) {
+            btnTerms.setOnClickListener(v -> {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(ATTRIBUTION_URL)));
+                } catch (Exception e) {
+                    Toast.makeText(this, "Could not open browser: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        Button btnLicense = findViewById(R.id.btnViewLicense);
+        if (btnLicense != null) {
+            btnLicense.setOnClickListener(v -> {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(LICENSE_URL)));
+                } catch (Exception e) {
+                    Toast.makeText(this, "Could not open browser: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
 
         btnOpenBattery.setOnClickListener(v -> openBatteryOptimization());
     }

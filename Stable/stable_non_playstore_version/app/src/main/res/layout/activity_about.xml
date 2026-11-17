@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D1117"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Header / Action Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Otter - Guide &amp; About"
+            android:textColor="#58A6FF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnCloseAbout"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:backgroundTint="#21262D"
+            android:text="Close"
+            android:textColor="#C9D1D9"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Card 1: Project & Developer Info -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#161B22"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Otter (v1.0.0.1)"
+                    android:textColor="#58A6FF"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="2dp"
+                    android:text="Open-source low latency webcam suite"
+                    android:textColor="#8B949E"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:text="Developer: spacecar"
+                    android:textColor="#3FB950"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="2dp"
+                    android:text="Repository: https://github.com/saprecar/Otter"
+                    android:textColor="#58A6FF"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="10dp">
+
+                    <Button
+                        android:id="@+id/btnOpenRepo"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        android:backgroundTint="#1F6FEB"
+                        android:text="Open GitHub"
+                        android:textColor="#FFFFFF"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/btnCopyRepo"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:backgroundTint="#21262D"
+                        android:text="Copy Link"
+                        android:textColor="#C9D1D9"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:text="License: MIT License (Free &amp; Open Source. Requires retaining app name, repo link, and developer thanks in derivative apps)."
+                    android:textColor="#8B949E"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- Card: Download & Run PC Desktop Client -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#161B22"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Required: Download PC Desktop Client"
+                    android:textColor="#58A6FF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="4dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Otter streams video from your phone, but you need the Otter PC Desktop Client running on your computer to register the Virtual Webcam (for OBS, Discord, Google Meet, Zoom, etc.)."
+                    android:textColor="#C9D1D9"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:text="Step 1: Download from GitHub on your PC"
+                    android:textColor="#3FB950"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="2dp"
+                    android:lineSpacingExtra="2dp"
+                    android:text="Visit: https://github.com/saprecar/Otter\nClick Code -> Download ZIP and extract it on your computer."
+                    android:textColor="#C9D1D9"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:text="Step 2: One-Click Launch Script"
+                    android:textColor="#E3B341"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="2dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Open the extracted Otter folder on your PC and run:\n• Windows: Double-click run_windows.bat\n• Linux: Run ./run_linux.sh\n• macOS: Double-click run_macos.command\n• Or command: python Dev/desktop/otter_app.py"
+                    android:textColor="#C9D1D9"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnCopyPcInstructions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:backgroundTint="#1F6FEB"
+                    android:text="Copy PC Download &amp; Run Steps"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Card 2: How to Use & Setup -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#161B22"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="How to Connect (Step-by-Step)"
+                    android:textColor="#58A6FF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:text="Method A: USB Cable (Recommended for 0-Latency)"
+                    android:textColor="#3FB950"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="4dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="1. On your phone, go to Settings -> About Phone and tap 'Build Number' 7 times to unlock Developer Options.\n2. In Settings -> Developer Options, turn ON 'USB Debugging'.\n3. Connect phone to PC using a USB data cable.\n4. When 'Allow USB debugging?' pops up on your phone, check 'Always allow' and tap OK.\n5. On PC, double-click run_windows.bat (or run_linux.sh / run_macos.command).\n6. Ensure 'USB (ADB Auto-Tunnel)' is selected on the PC controller.\n7. Tap 'Start' on your phone, then click 'Connect &amp; Start' on PC.\n8. Select 'Otter Virtual Camera' in OBS Studio, Discord, or Zoom."
+                    android:textColor="#C9D1D9"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="12dp"
+                    android:text="Method B: Wi-Fi Mode (Wireless Convenience)"
+                    android:textColor="#E3B341"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="4dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="1. Connect phone and PC to the SAME Wi-Fi network (5GHz band recommended for high bitrate).\n2. Open Otter on your phone and note the IP displayed on the main screen (e.g. IP: 192.168.1.50).\n3. Tap 'Start' on your phone.\n4. On PC, launch Otter and select 'Wi-Fi (LAN IP)'.\n5. Enter the phone's IP address into the IP box and click 'Connect &amp; Start'.\n6. Select 'Otter Virtual Camera' in your video conferencing or streaming app."
+                    android:textColor="#C9D1D9"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Card 3: Common Troubleshooting -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#161B22"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Common Troubleshooting"
+                    android:textColor="#58A6FF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:text="• Issue: PC cannot find phone over USB"
+                    android:textColor="#E3B341"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Fix: Ensure USB Debugging is ON in Developer Options. Change USB mode from 'Charging only' to 'File Transfer (MTP)'. Test with 'adb devices' on PC."
+                    android:textColor="#C9D1D9"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:text="• Issue: Stream dies when screen turns off or locks"
+                    android:textColor="#E3B341"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Fix: Keep 'Lock Mode: ON' enabled in Otter. Whitelist Otter in OEM battery saver (MIUI, HyperOS, ColorOS, Samsung One UI) and allow Autostart."
+                    android:textColor="#C9D1D9"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:text="• Issue: Wi-Fi stream lagging or connection refused"
+                    android:textColor="#E3B341"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Fix: Connect both phone and PC to 5GHz Wi-Fi band. Ensure Windows Firewall allows incoming connections on port 8089 and 8090."
+                    android:textColor="#C9D1D9"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnOpenBatterySettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:backgroundTint="#238636"
+                    android:text="Open Battery Optimization Settings"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Card 4: Universal Policies & Legal Agreement (Policies And Agreement Folder) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#161B22"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Policies, Agreement &amp; Attribution"
+                    android:textColor="#58A6FF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="• 100% Local Peer-to-Peer: Zero developer data retention or cloud storage.\n• Data Deletion &amp; Liability: Developer holds zero data, so server deletion is not applicable. Zero liability for local network packet loss, interception, or bugs.\n• Attribution: Created by spacecar (https://github.com/saprecar/Otter).\n• Governing Law: Republic of India | Jurisdiction: Competent Courts of Narmadapuram, Madhya Pradesh, India (PIN: 461001 / 461005).\n• Official Contact: getspacecar@gmail.com (Subject: [Otter-Legal])."
+                    android:textColor="#C9D1D9"
+                    android:textSize="11sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="10dp">
+
+                    <Button
+                        android:id="@+id/btnViewPrivacyPolicy"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="3dp"
+                        android:backgroundTint="#21262D"
+                        android:text="Master Policy"
+                        android:textColor="#58A6FF"
+                        android:textSize="10sp" />
+
+                    <Button
+                        android:id="@+id/btnViewUserAgreement"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="3dp"
+                        android:layout_marginEnd="3dp"
+                        android:backgroundTint="#21262D"
+                        android:text="Attribution"
+                        android:textColor="#58A6FF"
+                        android:textSize="10sp" />
+
+                    <Button
+                        android:id="@+id/btnViewLicense"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="3dp"
+                        android:backgroundTint="#21262D"
+                        android:text="License"
+                        android:textColor="#58A6FF"
+                        android:textSize="10sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Card 5: Special Thanks -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#161B22"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Acknowledgements &amp; Thanks"
+                    android:textColor="#58A6FF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="4dp"
+                    android:text="Special thanks to developer spacecar, Google Android Platform Tools (ADB) &amp; Camera2 teams, OBS Studio, and the open-source community for making low-latency mobile streaming accessible to everyone."
+                    android:textColor="#8B949E"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

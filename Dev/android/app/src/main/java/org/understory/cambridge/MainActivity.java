@@ -39,6 +39,7 @@ import android.util.Range;
 import android.util.Rational;
 import android.util.Size;
 import android.view.MotionEvent;
+import android.view.OrientationEventListener;
 import android.view.ScaleGestureDetector;
 import android.view.Surface;
 import android.view.TextureView;
@@ -172,6 +173,9 @@ public class MainActivity extends Activity {
     private volatile boolean encoderReady = false;
     private volatile boolean isMirrored = false;
     private int manualRotationAngle = 0;
+    private int sensorOrientation = 90;
+    private int deviceOrientation = 0;
+    private OrientationEventListener orientationEventListener;
 
     // Ultra Photo Full Sensor High-Res Capture
     private ImageReader stillImageReader;
@@ -194,14 +198,22 @@ public class MainActivity extends Activity {
     private boolean isFullscreenMode = false;
     private boolean isControlsOverlayVisible = true;
 
+    private static final String POLICY_URL = "https://github.com/saprecar/Otter/blob/main/Policies%20And%20Agreement/POLICIES_AND_AGREEMENT.md";
+    private static final String ATTRIBUTION_URL = "https://github.com/saprecar/Otter/blob/main/Policies%20And%20Agreement/ATTRIBUTION_AND_LICENSES.md";
+    private static final String LICENSE_URL = "https://github.com/saprecar/Otter/blob/main/LICENSE";
+    private static final int POLICY_VERSION = 2; // Incremented on each update to require re-consent
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        checkAndEnforceConsent();
+
         bindViews();
         setupClickListeners();
         setupPinchToZoom();
+        setupOrientationListener();
 
         cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -238,6 +250,67 @@ public class MainActivity extends Activity {
         }
 
         startControlServer();
+    }
+
+    private void checkAndEnforceConsent() {
+        android.content.SharedPreferences prefs = getSharedPreferences("otter_settings", Context.MODE_PRIVATE);
+        int accepted = prefs.getInt("accepted_policy_version", -1);
+        if (accepted < POLICY_VERSION) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert);
+            builder.setTitle("Otter - Master Policies & Agreement");
+            builder.setMessage(
+                "Welcome to Otter!\n\n" +
+                "Before using the camera and streaming features, you must review and agree to our consolidated policies:\n\n" +
+                "• 100% Local Peer-to-Peer: Video is encoded locally on hardware and streamed directly to your PC. Zero developer cloud ingestion.\n" +
+                "• Zero Developer Data Retention: The developer does NOT collect, store, monetize, or transmit personal data or video feeds. Because zero data is held, deletion on developer servers is not applicable.\n" +
+                "• OS / Store & OEM Telemetry: Google Play Services or device manufacturers (MIUI, HyperOS, ColorOS, Funtouch OS, One UI) collect their own diagnostics as per their respective policies, outside developer control.\n" +
+                "• Absolute Disclaimer of Warranties: Software provided 'AS IS' with all faults. The developer bears zero liability for local network packet interception, data loss, device heating, or software bugs.\n" +
+                "• Mandatory Attribution: Any reuse or fork must prominently credit developer 'spacecar', name 'Otter', and link to https://github.com/saprecar/Otter.\n" +
+                "• Governing Law & Jurisdiction: Republic of India (Information Technology Act, 2000). Exclusive jurisdiction: Competent Courts of Narmadapuram, Madhya Pradesh, India (PIN: 461001 / 461005).\n" +
+                "• Contact: getspacecar@gmail.com (Subject: [Otter-Legal]).\n\n" +
+                "You must review and accept these terms to continue."
+            );
+            builder.setCancelable(false);
+
+            builder.setPositiveButton("Accept & Continue", (dialog, which) -> {
+                prefs.edit().putInt("accepted_policy_version", POLICY_VERSION).apply();
+                dialog.dismiss();
+            });
+
+            builder.setNegativeButton("Decline & Exit", (dialog, which) -> {
+                dialog.dismiss();
+                finishAffinity();
+            });
+
+            builder.setNeutralButton("View Policies", null);
+
+            AlertDialog dialog = builder.create();
+            dialog.setCanceledOnTouchOutside(false);
+            dialog.show();
+
+            Button btnNeutral = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+            if (btnNeutral != null) {
+                btnNeutral.setOnClickListener(v -> showPolicyLinksDialog());
+            }
+        }
+    }
+
+    private void showPolicyLinksDialog() {
+        String[] options = {"Consolidated Master Policy", "Attribution & Licenses", "Open Source License"};
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle("Review Policies Online (Markdown)")
+            .setItems(options, (d, which) -> {
+                String targetUrl = POLICY_URL;
+                if (which == 1) targetUrl = ATTRIBUTION_URL;
+                else if (which == 2) targetUrl = LICENSE_URL;
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)));
+                } catch (Exception e) {
+                    Toast.makeText(this, "Could not open browser: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            })
+            .setPositiveButton("Back", null)
+            .show();
     }
 
     private void bindViews() {
@@ -442,6 +515,8 @@ public class MainActivity extends Activity {
         CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
         Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
         if (facing != null) currentLensFacing = facing;
+        Integer sOrient = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+        if (sOrient != null) sensorOrientation = sOrient;
 
         // Dynamic Resolutions (Check up to 4K 3840x2160)
         supportedResolutions.clear();
@@ -1048,6 +1123,47 @@ public class MainActivity extends Activity {
         builder.set(CaptureRequest.SCALER_CROP_REGION, cropRect);
     }
 
+    private void setupOrientationListener() {
+        orientationEventListener = new OrientationEventListener(this) {
+            @Override
+            public void onOrientationChanged(int orientation) {
+                if (orientation == ORIENTATION_UNKNOWN) return;
+                int newOrientation;
+                if (orientation >= 315 || orientation < 45) {
+                    newOrientation = 0; // Portrait
+                } else if (orientation >= 45 && orientation < 135) {
+                    newOrientation = 270; // Landscape Right (Phone rotated right)
+                } else if (orientation >= 135 && orientation < 225) {
+                    newOrientation = 180; // Inverted Portrait
+                } else {
+                    newOrientation = 90; // Landscape Left (Phone rotated left)
+                }
+                if (newOrientation != deviceOrientation) {
+                    deviceOrientation = newOrientation;
+                    runOnUiThread(() -> {
+                        if (previewView != null && previewView.isAvailable()) {
+                            configureTransform(previewView.getWidth(), previewView.getHeight());
+                        }
+                    });
+                }
+            }
+        };
+        if (orientationEventListener.canDetectOrientation()) {
+            orientationEventListener.enable();
+        }
+    }
+
+    private int computeRelativeRotation() {
+        int relative;
+        if (currentLensFacing == CameraCharacteristics.LENS_FACING_FRONT) {
+            relative = (sensorOrientation + deviceOrientation) % 360;
+            relative = (360 - relative) % 360;
+        } else {
+            relative = (sensorOrientation - deviceOrientation + 360) % 360;
+        }
+        return (relative + manualRotationAngle) % 360;
+    }
+
     private void configureTransform(int viewWidth, int viewHeight) {
         if (previewView == null || !previewView.isAvailable() || targetWidth == 0 || targetHeight == 0) return;
         Matrix matrix = new Matrix();
@@ -1055,9 +1171,21 @@ public class MainActivity extends Activity {
         float centerX = viewRect.centerX();
         float centerY = viewRect.centerY();
 
-        if (manualRotationAngle != 0) {
-            matrix.postRotate(manualRotationAngle, centerX, centerY);
+        int totalRotation = computeRelativeRotation();
+
+        if (totalRotation == 90 || totalRotation == 270) {
+            RectF bufferRect = new RectF(0, 0, targetHeight, targetWidth);
+            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
+            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
+            float scale = Math.max(
+                (float) viewHeight / targetHeight,
+                (float) viewWidth / targetWidth);
+            matrix.postScale(scale, scale, centerX, centerY);
+            matrix.postRotate(totalRotation, centerX, centerY);
+        } else if (totalRotation != 0) {
+            matrix.postRotate(totalRotation, centerX, centerY);
         }
+
         if (isMirrored) {
             matrix.postScale(-1, 1, centerX, centerY);
         }
@@ -1345,7 +1473,7 @@ public class MainActivity extends Activity {
                     float evVal = (exposureStep != null) ? currentExposureCompensation * exposureStep.floatValue() : currentExposureCompensation;
                     return "{\"status\":\"ok\",\"streaming\":" + isStreaming + ",\"zoom\":" + currentZoom +
                             ",\"lens\":\"" + ((currentLensFacing == CameraCharacteristics.LENS_FACING_FRONT) ? "FRONT" : "BACK") +
-                            "\",\"mirrored\":" + isMirrored + ",\"rotationAngle\":" + manualRotationAngle +
+                            "\",\"mirrored\":" + isMirrored + ",\"rotationAngle\":" + computeRelativeRotation() +
                             ",\"width\":" + targetWidth + ",\"height\":" + targetHeight +
                             ",\"targetFps\":" + targetFps +
                             ",\"iso\":" + currentIso + ",\"shutter\":" + currentShutterNs +
@@ -1420,6 +1548,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (orientationEventListener != null) {
+            orientationEventListener.disable();
+        }
         stopStreaming();
         try {
             if (controlServerSocket != null) controlServerSocket.close();

@@ -20,6 +20,10 @@
 - FEAT-018 | 2026-11-17 | Multi-Camera & Auto-Discovery Desktop Suite | Auto-detect camera IP/port, custom stream & control ports, custom virtual camera name, and multi-camera instance support. Status: WIP
 - FEAT-019 | 2026-11-17 | OBS Virtual Camera Fallback Bridge | Native shared memory output to OBS Virtual Camera driver without requiring separate DLL installation. Status: Tested
 - FEAT-020 | 2026-11-17 | Android 14 Native UVC Webcam Support | Detect and trigger native Android 14 USB Webcam gadget mode (svc usb setFunctions uvc) on supported devices. Status: Tested
-- FEAT-021 | 2026-11-17 | Modern Glassmorphic UI Redesign | Redesign Android and PC interfaces with card grid, Quick Modes presets, floating controls, and sliders. Status: Tested (Android)
-- FEAT-022 | 2026-11-17 | Pro Manual Camera Suite | ISO, Shutter Speed, AWB, EV +/- buttons, Zoom +/- controls, and Mono/B&W effects synced bidirectionally. Status: Tested (Android)
-- FEAT-023 | 2026-11-17 | Hardware Capabilities & Ultra-Res Capture | Dynamic 4K resolution list, FPS range detection (up to 60fps), and max-sensor full-resolution photo capture (64MP+). Status: Tested (Android)
+- FEAT-021 | 2026-11-17 | Modern Glassmorphic UI Redesign | Redesign Android and PC interfaces with card grid, Quick Modes presets, floating controls, and sliders. Status: Completed
+- FEAT-022 | 2026-11-17 | Pro Manual Camera Suite | ISO, Shutter Speed, AWB, EV +/- buttons, Zoom +/- controls, and Mono/B&W effects synced bidirectionally. Status: Completed
+- FEAT-023 | 2026-11-17 | Hardware Capabilities & Ultra-Res Capture | Dynamic 4K resolution list, FPS range detection (up to 60fps), and max-sensor full-resolution photo capture (64MP+). Status: Completed
+- FEAT-024 | 2026-11-17 | PC Pro Sliders & Auto Toggles | PC desktop sliders for Zoom, ISO, Shutter, WB, and FX with Auto toggle interlocks and Zoom +/- buttons. Status: Completed
+- FEAT-025 | 2026-11-17 | Stable Release Packaging | Dual packages for Stable_Desktop_Client and Stable_android_app with root launchers and APK. Status: Tested
+- FEAT-026 | 2026-11-17 | Distribution & Store Policies | Split stable releases into playstore and non-playstore versions with Indian Law ToS and Privacy Policy. Status: Tested
+- FEAT-027 | 2026-11-17 | Mandatory Consent & Online Links | 1st-launch/update consent screen on PC and Android with online links (Privacy, Terms, License). Status: Tested
