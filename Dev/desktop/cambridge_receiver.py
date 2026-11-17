@@ -26,8 +26,12 @@ try:
 except ImportError:
     VIRTUAL_CAM_AVAILABLE = False
 
-from adb_tunnel import ADBTunnel
-from cambridge_control import CamBridgeControl
+try:
+    from adb_tunnel import ADBTunnel
+    from cambridge_control import CamBridgeControl
+except ImportError:
+    from Dev.desktop.adb_tunnel import ADBTunnel
+    from Dev.desktop.cambridge_control import CamBridgeControl
 
 try:
     from driver.unity_capture_bridge import UnityCaptureSharedMemory
@@ -166,7 +170,7 @@ class H264DecoderPipe:
 
 # [AI-BLOCK: Main CamBridge Receiver and Virtual Camera Feed]
 class CamBridgeReceiver:
-    def __init__(self, host="127.0.0.1", stream_port=8089, control_port=8090, width=1280, height=720, fps=30, camera_name="Otter Camera 1", window_title=None):
+    def __init__(self, host="127.0.0.1", stream_port=8089, control_port=8090, width=1280, height=720, fps=30, camera_name="Otter Camera 1", window_title=None, rotation=0):
         self.host = host
         self.stream_port = stream_port
         self.control_port = control_port
@@ -177,6 +181,11 @@ class CamBridgeReceiver:
         self.window_title = window_title if window_title else f"Otter PC Monitor - {camera_name} [Port: {stream_port}]"
         self.running = False
         self.controller = CamBridgeControl(host=self.host, port=self.control_port)
+        self.rotation_angle = rotation
+
+    def set_rotation(self, angle: int):
+        self.rotation_angle = ((angle % 360) + 360) % 360
+        print(f"Receiver video rotation set to {self.rotation_angle}°.")
 
     def start_receiver(self, enable_virtualcam=True, show_preview=False):
         if not CV2_AVAILABLE or not NUMPY_AVAILABLE:
@@ -187,6 +196,7 @@ class CamBridgeReceiver:
         print(f"CamBridge connecting to {self.host}:{self.stream_port}...")
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock = sock
         sock.settimeout(5.0)
 
         connected = False
@@ -248,12 +258,50 @@ class CamBridgeReceiver:
                     except Exception as ex:
                         print(f"Virtual camera initialization notice: {ex}.")
 
+        # Background thread to sync rotation state from mobile device
+        def _sync_device_rotation():
+            while self.running:
+                try:
+                    time.sleep(1.0)
+                    st = self.controller.get_status()
+                    if st.get("status") == "ok":
+                        remote_rot = st.get("rotationAngle")
+                        if remote_rot is not None and remote_rot != self.rotation_angle:
+                            self.rotation_angle = remote_rot
+                            print(f"Synced video rotation from mobile device: {self.rotation_angle}°.")
+                except Exception:
+                    pass
+
+        rot_sync_thread = threading.Thread(target=_sync_device_rotation, daemon=True)
+        rot_sync_thread.start()
+
         self.dispatched_count = 0
         def dispatch_frame(frame):
             if frame is None:
                 return
-            if frame.shape[1] != self.width or frame.shape[0] != self.height:
-                frame = cv2.resize(frame, (self.width, self.height))
+
+            rot = self.rotation_angle % 360
+            if rot == 90:
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+            elif rot == 180:
+                frame = cv2.rotate(frame, cv2.ROTATE_180)
+            elif rot == 270:
+                frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+            fh, fw = frame.shape[:2]
+            if fw != self.width or fh != self.height:
+                if rot in (90, 270):
+                    # Aspect-ratio preserving fit with black pillarboxes on sides for portrait orientation
+                    scale = min(self.width / fw, self.height / fh)
+                    nw, nh = int(fw * scale), int(fh * scale)
+                    resized = cv2.resize(frame, (nw, nh), interpolation=cv2.INTER_LINEAR)
+                    canvas = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+                    x_off = (self.width - nw) // 2
+                    y_off = (self.height - nh) // 2
+                    canvas[y_off:y_off + nh, x_off:x_off + nw] = resized
+                    frame = canvas
+                else:
+                    frame = cv2.resize(frame, (self.width, self.height))
 
             if uc_bridge:
                 uc_bridge.send_frame(frame)
@@ -267,9 +315,9 @@ class CamBridgeReceiver:
 
             self.dispatched_count += 1
             if self.dispatched_count == 1:
-                print(f"Streaming live video: First frame received and dispatched ({self.width}x{self.height}).")
+                print(f"Streaming live video: First frame received and dispatched ({self.width}x{self.height}, rot={rot}°).")
             elif self.dispatched_count % 150 == 0:
-                print(f"Streaming live video: Dispatched {self.dispatched_count} frames to virtual cameras.")
+                print(f"Streaming live video: Dispatched {self.dispatched_count} frames to virtual cameras (rot={rot}°).")
 
         # Real-time H.264 stream decoder pipe with auto-scaling and direct frame dispatch
         decoder = H264DecoderPipe(width=self.width, height=self.height, on_frame=dispatch_frame)
@@ -338,6 +386,11 @@ class CamBridgeReceiver:
 
     def stop_receiver(self):
         self.running = False
+        if hasattr(self, 'sock') and self.sock:
+            try:
+                self.sock.close()
+            except Exception:
+                pass
 
     def _recv_exact(self, sock, num_bytes):
         buffer = bytearray()
@@ -358,6 +411,7 @@ def main():
     parser.add_argument("--stream-port", type=int, default=8089, help="Video stream port")
     parser.add_argument("--control-port", type=int, default=8090, help="Control RPC port")
     parser.add_argument("--no-vcam", action="store_true", help="Disable virtual camera and only show window monitor")
+    parser.add_argument("--rotate", type=int, choices=[0, 90, 180, 270], default=0, help="Initial video rotation in degrees")
 
     args = parser.parse_args()
 
@@ -379,7 +433,8 @@ def main():
     receiver = CamBridgeReceiver(
         host=target_ip,
         stream_port=args.stream_port,
-        control_port=args.control_port
+        control_port=args.control_port,
+        rotation=args.rotate
     )
 
     try:

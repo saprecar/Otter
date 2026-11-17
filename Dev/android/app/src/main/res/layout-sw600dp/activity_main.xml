@@ -3,17 +3,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#0D1117"
-    android:orientation="vertical"
-    android:padding="20dp">
+    android:orientation="horizontal"
+    android:padding="12dp">
 
-    <!-- Viewfinder with Screen Glow Frame -->
+    <!-- Large Viewfinder on Left -->
     <FrameLayout
-        android:id="@+id/viewfinderContainer"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:id="@+id/viewfinderCard"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
         android:layout_weight="1"
-        android:background="#000000"
-        android:padding="0dp">
+        android:background="@drawable/bg_dark_card">
 
         <TextureView
             android:id="@+id/previewView"
@@ -26,250 +25,663 @@
             android:layout_height="match_parent"
             android:background="#00000000"
             android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/badgeLive"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_badge_live"
+                android:paddingLeft="10dp"
+                android:paddingTop="3dp"
+                android:paddingRight="10dp"
+                android:paddingBottom="3dp"
+                android:text="● Live"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/badgeResolution"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:background="@drawable/bg_badge_dark"
+                android:minWidth="0dp"
+                android:paddingLeft="10dp"
+                android:paddingTop="0dp"
+                android:paddingRight="10dp"
+                android:paddingBottom="0dp"
+                android:text="1280×720"
+                android:textColor="#C9D1D9"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/badgeFps"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_badge_dark"
+                android:minWidth="0dp"
+                android:paddingLeft="10dp"
+                android:paddingTop="0dp"
+                android:paddingRight="10dp"
+                android:paddingBottom="0dp"
+                android:text="30 FPS"
+                android:textColor="#C9D1D9"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_badge_dark"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="6dp">
+
+            <Button
+                android:id="@+id/btnFloatingZoomIn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_button_action"
+                android:minWidth="0dp"
+                android:padding="0dp"
+                android:text="+"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/textZoomFloat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:text="1.0x"
+                android:textColor="#58A6FF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnFloatingZoomOut"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_button_action"
+                android:minWidth="0dp"
+                android:padding="0dp"
+                android:text="-"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </FrameLayout>
 
-    <!-- Status Header for Tablet -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingTop="12dp"
-        android:paddingBottom="6dp">
+    <!-- Tablet Control Panel on Right -->
+    <ScrollView
+        android:id="@+id/controlsScrollView"
+        android:layout_width="360dp"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:paddingStart="12dp"
+        android:paddingEnd="4dp">
 
-        <TextView
-            android:id="@+id/statusText"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Otter: Ready"
-            android:textColor="#238636"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/cameraIndicatorText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="#21262D"
-            android:paddingLeft="12dp"
-            android:paddingRight="12dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:text="Lens: BACK [0]"
-            android:textColor="#58A6FF"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            <LinearLayout
+                android:id="@+id/headerBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingBottom="6dp">
 
-        <Button
-            android:id="@+id/btnAbout"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_marginStart="10dp"
-            android:backgroundTint="#21262D"
-            android:paddingLeft="12dp"
-            android:paddingRight="12dp"
-            android:text="Help &amp; About"
-            android:textColor="#58A6FF"
-            android:textSize="13sp" />
-    </LinearLayout>
+                <TextView
+                    android:id="@+id/statusText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Otter: Ready"
+                    android:textColor="#238636"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/streamInfoText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="12dp"
-        android:text="IP: -- | Port: 8089 (USB ADB / WiFi)"
-        android:textColor="#8B949E"
-        android:textSize="13sp" />
+                <Button
+                    android:id="@+id/btnAbout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:background="@drawable/bg_button_action"
+                    android:minWidth="0dp"
+                    android:paddingLeft="10dp"
+                    android:paddingRight="10dp"
+                    android:text="Settings"
+                    android:textColor="#58A6FF"
+                    android:textSize="11sp" />
 
-    <!-- Tablet Controls Row 1 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btnFullscreen"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_button_action"
+                    android:minWidth="0dp"
+                    android:padding="0dp"
+                    android:text="⛶"
+                    android:textColor="#58A6FF"
+                    android:textSize="14sp" />
+            </LinearLayout>
 
-        <Button
-            android:id="@+id/btnStart"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#238636"
-            android:text="Start Stream"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingBottom="6dp">
 
-        <Button
-            android:id="@+id/btnPause"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#D29922"
-            android:text="Pause"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+                <TextView
+                    android:id="@+id/statusIndicatorText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📷 Camera Connected"
+                    android:textColor="#238636"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/btnStop"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#DA3633"
-            android:text="Stop"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+                <TextView
+                    android:id="@+id/cameraIndicatorText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_badge_dark"
+                    android:paddingLeft="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingRight="8dp"
+                    android:paddingBottom="2dp"
+                    android:text="Lens: BACK [0]"
+                    android:textColor="#58A6FF"
+                    android:textSize="11sp" />
 
-        <Button
-            android:id="@+id/btnSwitchCam"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#30363D"
-            android:text="Flip Lens"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
-    </LinearLayout>
+                <TextView
+                    android:id="@+id/codecBadgeText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_badge_dark"
+                    android:paddingLeft="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingRight="8dp"
+                    android:paddingBottom="2dp"
+                    android:text="H.264"
+                    android:textColor="#8B949E"
+                    android:textSize="11sp" />
+            </LinearLayout>
 
-    <!-- Tablet Controls Row 2 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:paddingTop="4dp">
+            <!-- Quick Modes Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/bg_dark_card"
+                android:orientation="vertical"
+                android:padding="8dp">
 
-        <Button
-            android:id="@+id/btnResolution"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#1F6FEB"
-            android:text="Res: 720p"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingBottom="6dp"
+                    android:text="⚡ Quick Modes"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/btnMirror"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#388BFD"
-            android:text="Mirror: OFF"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btnBackgroundLock"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#8957E5"
-            android:text="Lock Mode: ON"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+                    <Button
+                        android:id="@+id/btnModeMeetings"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mode_meetings"
+                        android:text="Meetings"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/btnBatteryGuide"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#30363D"
-            android:text="OEM Battery Fix"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
-    </LinearLayout>
+                    <Button
+                        android:id="@+id/btnModeClass"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mode_class"
+                        android:text="Class"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
 
-    <!-- Tablet Lighting Controls Row 3 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:paddingTop="4dp">
+                    <Button
+                        android:id="@+id/btnModeStreaming"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mode_streaming"
+                        android:text="Stream"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/btnTorch"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#D29922"
-            android:text="Torch: OFF"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+                    <Button
+                        android:id="@+id/btnModeSnapshot"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mode_snapshot"
+                        android:text="Snapshot"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
-        <Button
-            android:id="@+id/btnScreenGlow"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#F0883E"
-            android:text="Glow: OFF"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btnRotate"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#8957E5"
-            android:text="Rotate: 0°"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
-    </LinearLayout>
+                    <Button
+                        android:id="@+id/btnModeScan"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mode_scan"
+                        android:text="Scan/OCR"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
 
-    <!-- Tablet Manual Camera Focus & Exposure Row 4 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:paddingTop="4dp">
+                    <Button
+                        android:id="@+id/btnModeSecurity"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mode_security"
+                        android:text="Security"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/btnFocusMode"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#238636"
-            android:text="AF: Auto"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+                    <Button
+                        android:id="@+id/btnModeFun"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mode_fun"
+                        android:text="Filter"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/btnManualFocus"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#30363D"
-            android:text="Focus: Inf"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+                    <Button
+                        android:id="@+id/btnModePro"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_mode_pro"
+                        android:text="Pro Man"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
 
-        <Button
-            android:id="@+id/btnExposure"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_margin="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="#30363D"
-            android:text="EV: 0"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
-    </LinearLayout>
+            <!-- Camera Controls & Steppers -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/bg_dark_card"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnEvMinus"
+                        android:layout_width="48dp"
+                        android:layout_height="32dp"
+                        android:background="@drawable/bg_button_action"
+                        android:minWidth="0dp"
+                        android:padding="0dp"
+                        android:text="EV -"
+                        android:textColor="#C9D1D9"
+                        android:textSize="10sp" />
+
+                    <SeekBar
+                        android:id="@+id/seekbarExposure"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <Button
+                        android:id="@+id/btnEvPlus"
+                        android:layout_width="48dp"
+                        android:layout_height="32dp"
+                        android:background="@drawable/bg_button_action"
+                        android:minWidth="0dp"
+                        android:padding="0dp"
+                        android:text="EV +"
+                        android:textColor="#C9D1D9"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/textEvValue"
+                        android:layout_width="42dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:text="+0.0"
+                        android:textColor="#58A6FF"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnFocusMode"
+                        android:layout_width="68dp"
+                        android:layout_height="32dp"
+                        android:background="@drawable/bg_button_action"
+                        android:minWidth="0dp"
+                        android:padding="0dp"
+                        android:text="AF: Auto"
+                        android:textColor="#238636"
+                        android:textSize="10sp" />
+
+                    <SeekBar
+                        android:id="@+id/seekbarFocus"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/textFocusValue"
+                        android:layout_width="42dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:text="Auto"
+                        android:textColor="#58A6FF"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnMirror"
+                        android:layout_width="0dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_action"
+                        android:text="Flip: OFF"
+                        android:textColor="#C9D1D9"
+                        android:textSize="10sp" />
+
+                    <Button
+                        android:id="@+id/btnRotate"
+                        android:layout_width="0dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_action"
+                        android:text="Rotate: 0°"
+                        android:textColor="#C9D1D9"
+                        android:textSize="10sp" />
+
+                    <Button
+                        android:id="@+id/btnTorch"
+                        android:layout_width="0dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_action"
+                        android:text="Torch: OFF"
+                        android:textColor="#C9D1D9"
+                        android:textSize="10sp" />
+
+                    <Button
+                        android:id="@+id/btnScreenGlow"
+                        android:layout_width="0dp"
+                        android:layout_height="32dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_action"
+                        android:text="Glow: OFF"
+                        android:textColor="#C9D1D9"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/btnToggleProOptions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:paddingTop="6dp"
+                    android:text="Pro Options ▾"
+                    android:textColor="#58A6FF"
+                    android:textSize="11sp" />
+
+                <LinearLayout
+                    android:id="@+id/layoutProOptions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btnIso"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_button_action"
+                            android:text="ISO: Auto"
+                            android:textColor="#58A6FF"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnShutter"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_button_action"
+                            android:text="Shutter: Auto"
+                            android:textColor="#58A6FF"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnAwb"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_button_action"
+                            android:text="WB: Auto"
+                            android:textColor="#58A6FF"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/btnColorEffect"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_button_action"
+                            android:text="FX: Color"
+                            android:textColor="#58A6FF"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Streaming Actions -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_dark_card"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnStart"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1.2"
+                        android:background="@drawable/bg_mode_meetings"
+                        android:text="Start Stream"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnPause"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="0.8"
+                        android:background="@drawable/bg_button_action"
+                        android:text="Pause"
+                        android:textColor="#C9D1D9"
+                        android:textSize="11sp" />
+
+                    <Button
+                        android:id="@+id/btnStop"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="0.8"
+                        android:background="@drawable/bg_button_action"
+                        android:text="Stop"
+                        android:textColor="#F85149"
+                        android:textSize="11sp" />
+
+                    <Button
+                        android:id="@+id/btnSwitchCam"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1.2"
+                        android:background="@drawable/bg_mode_class"
+                        android:text="Switch Lens"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnUltraPhoto"
+                    android:layout_width="match_parent"
+                    android:layout_height="34dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_mode_snapshot"
+                    android:text="★ Ultra Photo (Full Res)"
+                    android:textColor="#FFFFFF"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnBackgroundLock"
+                        android:layout_width="0dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_action"
+                        android:text="Lock Mode: ON"
+                        android:textColor="#238636"
+                        android:textSize="10sp" />
+
+                    <Button
+                        android:id="@+id/btnBatteryGuide"
+                        android:layout_width="0dp"
+                        android:layout_height="32dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_action"
+                        android:text="Battery Guide"
+                        android:textColor="#58A6FF"
+                        android:textSize="10sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/streamInfoText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="6dp"
+                android:text="Port: 8089"
+                android:textColor="#8B949E"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnFloatingMenu"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_badge_live"
+        android:text="⚡"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:visibility="gone" />
 
 </LinearLayout>

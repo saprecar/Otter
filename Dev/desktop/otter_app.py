@@ -856,7 +856,9 @@ class OtterApp:
         res = self.controller.rotate_camera()
         angle = res.get("rotationAngle", 0)
         self.btn_rotate.configure(text=f"Rotate: {angle}°")
-        self.log(f"Rotate Camera: {res}")
+        if self.receiver:
+            self.receiver.set_rotation(angle)
+        self.log(f"Rotate Camera to {angle}°: {res}")
 
     def toggle_torch(self):
         if not self.controller:
@@ -965,6 +967,12 @@ class OtterApp:
             
             glow = res.get("glowName", "OFF")
             self.btn_glow.configure(text=f"Front Glow: {glow}")
+            
+            angle = res.get("rotationAngle")
+            if angle is not None:
+                self.btn_rotate.configure(text=f"Rotate: {angle}°")
+                if self.receiver and self.receiver.rotation_angle != angle:
+                    self.receiver.set_rotation(angle)
             self.log(f"Synced Device Status: {res}")
         else:
             self.log(f"Sync failed: {res}")
@@ -1001,6 +1009,12 @@ class OtterApp:
 
             lens = r.get("lens", "BACK")
             self.btn_flip.configure(text=f"Flip ({lens})")
+
+            angle = r.get("rotationAngle")
+            if angle is not None:
+                self.btn_rotate.configure(text=f"Rotate: {angle}°")
+                if self.receiver and self.receiver.rotation_angle != angle:
+                    self.receiver.set_rotation(angle)
         except Exception:
             pass
 

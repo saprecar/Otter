@@ -133,3 +133,26 @@
   - Replaced manual `struct.pack` in `obs_virtualcam_bridge.py` with native C `QueueHeader` ctypes structure matching MSVC 64-bit alignment.
   - Fixed 4-byte padding offset before `uint64_t interval`, ensuring `interval` is placed at offset 40 (`333333` for 30 FPS) instead of offset 36. This prevents `obs-virtualcam-module64.dll` from reading `interval = 0` during DirectShow device enumeration.
   - Set queue header `state = SHARED_QUEUE_STATE_STOPPING` on receiver termination to cleanly detach shared memory.
+
+## 2026-11-17 03:15:00 IST (UTC+05:30)
+- Fixed portrait orientation mismatch and bidirectional stream rotation synchronization:
+  - Added live rotation angle (`rotation_angle`) and `set_rotation(angle)` to `CamBridgeReceiver` with OpenCV lossless rotation (`cv2.ROTATE_90_CLOCKWISE`, `ROTATE_180`, `ROTATE_90_COUNTERCLOCKWISE`).
+  - Added aspect-ratio preserving pillarboxing for portrait mode so 90°/270° orientation is centered on standard 16:9 1280x720 canvas with zero geometric distortion.
+  - Implemented background thread (`_sync_device_rotation`) continuously querying Android device rotation angle via control RPC.
+  - Added remote `start_stream` and `stop_stream` control RPC actions in `MainActivity.java` and desktop client.
+  - Fixed camera flip freeze by properly calling `stopEncoder()` and reinitializing MediaCodec input surfaces on Camera2 lens switches.
+  - Installed updated APK on connected device (`10BCA5153U000ER`) and verified live stream decoding, rotation sync, and virtual camera frame dispatch.
+
+## 2026-11-17 03:26:00 IST (UTC+05:30)
+- Implemented comprehensive Android UI overhaul and Pro Camera engine:
+  - Rebuilt Android UI across phone portrait (`layout/activity_main.xml`), landscape (`layout-land/`), and tablet (`layout-sw600dp/`) using modern dark glassmorphic design (`#0D1117` / `#161B22` / `#21262D`).
+  - Added live overlay badges on viewfinder: `● Live` pill, resolution badge, and FPS badge.
+  - Added floating on-screen zoom controls (`[ + ]`, `[ - ]`, `1.0x`) and smooth two-finger pinch-to-zoom on the live viewfinder TextureView.
+  - Added dedicated Exposure Compensation stepper buttons (`[ EV - ]`, `[ EV + ]`) with real-time SeekBar and EV readout.
+  - Implemented Pro Manual Camera Mode: ISO selector (`Auto`, `100` to `3200`), Shutter Speed selector (`Auto`, `1/1000s` to `1/30s`), White Balance (`Auto`, `Daylight`, `Cloudy`, `Fluorescent`, `Tungsten`), and Color Effects (Color, B&W Mono, Negative, Sepia).
+  - Implemented dynamic hardware capability detection querying `StreamConfigurationMap` for resolutions up to 4K (`3840x2160`) and sensor FPS ranges up to 60 FPS.
+  - Implemented 8 Quick Mode presets: Meetings, Online Class, Streaming, Snapshot, Scan/OCR, Security, Fun Filter, and Pro Manual.
+  - Implemented Ultra Photo pipeline using full-sensor `ImageReader` capturing maximum resolution uncompressed JPEG (64MP/48MP/16MP).
+  - Added Fullscreen mode with collapsible floating action menu (`⚡`) matching reference design.
+  - Extended TCP RPC control server with `get_capabilities`, `set_zoom`, `ev_step`, `set_iso`, `set_shutter`, `set_awb`, `set_effect`, `set_fps`, `set_quick_mode`, and `capture_still`.
+  - Compiled debug APK via Gradle with zero errors (778 KB binary).

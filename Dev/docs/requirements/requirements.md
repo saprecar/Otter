@@ -8,3 +8,5 @@
 - REQ-006 | 2026-11-16 | Otter Desktop UI with OBS/Discord instructions, spacecar branding, and MIT license. Status: Tested
 - REQ-007 | 2026-11-16 | Background WakeLock/ForegroundService, OEM anti-kill guides, and desktop dependency wizard. Status: Tested
 - REQ-008 | 2026-11-17 | Auto/manual camera focus and exposure compensation controls synced bidirectionally in real-time between Android and Desktop. Status: Tested
+- REQ-009 | 2026-11-17 | Pro Manual Camera Controls (ISO, shutter speed, AWB, EV +/-, mono/B&W effect, zoom +/-) and image adjustments (brightness, contrast, warmth) synced with PC. Status: WIP
+- REQ-010 | 2026-11-17 | Dynamic Hardware Capability Detection (up to 4K resolutions, available FPS ranges, ultra-res full-sensor photo capture up to 64MP+). Status: WIP

@@ -11,31 +11,58 @@
 
 ## 1. Android Mobile App (Otter)
 
-### UI Layout
-```
-+------------------------------------------+
-|      [Otter Camera Preview Viewfinder]   |
-|                                          |
-|                                          |
-|                                          |
-+------------------------------------------+
-| Status: Otter: Ready      [Lens: BACK 0] |
-| IP: 192.168.1.X | Port: 8089 (USB / WiFi)|
-+------------------------------------------+
-| [ Start ]  [ Pause ]  [ Stop ]  [ Flip ] |
-| [ Res: 720p ]           [ Mirror: OFF ]  |
-+------------------------------------------+
+### Modern Dark Glassmorphic UI Layout
+```text
++-------------------------------------------------------------+
+| [O] Otter Cam                     [Settings] [Fullscreen]   |
+|     Camera for Every Purpose                                |
++-------------------------------------------------------------+
+| +---------------------------------------------------------+ |
+| | [● Live]      [4K / 1080p v]     [60 FPS v]             | |
+| |                                                         | |
+| |                  CAMERA VIEWPORT             [ + ] Zoom | |
+| |             (Live Camera2 / Virtual Feed)    | 1.0x|    | |
+| |                                              [ - ] Zoom | |
+| |                                                         | |
+| +---------------------------------------------------------+ |
+| [Cam Connected]  |  Lens: 0 (BACK)  |  [ H.264 ]            |
++-------------------------------------------------------------+
+| ⚡ Quick Modes                           Choose a purpose   |
+| +-------------+ +-------------+ +-------------+ +---------+ |
+| | [Meetings]  | | [Online Cl] | | [Streaming] | |[Snapshot| |
+| |    Green    | |    Blue     | |   Purple    | | Orange  | |
+| +-------------+ +-------------+ +-------------+ +---------+ |
+| +-------------+ +-------------+ +-------------+ +---------+ |
+| | [Scan/OCR]  | | [Security]  | |[Fun Filter] | | [Pro Man| |
+| |    Cyan     | |  Slate Blue | |   Emerald   | |  Pink   | |
+| +-------------+ +-------------+ +-------------+ +---------+ |
++-------------------------------------------------------------+
+| ⚙ Camera Settings                            More Options ▾ |
+|  [ EV - ] [--------------o--------------] [ EV + ]   +0.0   |
+|  [ AF: Auto ] [----------o--------------]            Auto   |
+|  [ Flip: OFF ]  [ Rotate: 0° ]  [ Torch: OFF ]  [ Glow: OFF]|
+|  Pro: [ ISO: Auto ] [ Shutter: Auto ] [ WB: Auto ] [ FX: Col|
++-------------------------------------------------------------+
+| [ Start Stream ]  [ Pause ]  [ Stop ]  [ Switch Lens ]      |
+| [★ Ultra Photo (Full Res)]  [ Lock Mode: ON ]  [ Battery ]  |
++-------------------------------------------------------------+
+| ● Otter: Ready                          Port: 8089 | v1.1.0 |
++-------------------------------------------------------------+
 ```
 
-### Controls
-- **Start**: Initializes the hardware H.264 `MediaCodec` encoder and begins broadcasting on port `8089`.
-- **Pause / Resume**: Halts frame transmission without closing the connection.
-- **Stop**: Safely releases the `Camera2` capture session and encoder.
-- **Flip**: Safely swaps between rear and front camera sensors without closing the app.
-- **Lens Badge**: Displays active camera sensor orientation (e.g. `Lens: BACK [0]` or `Lens: FRONT [1]`).
-- **Res Toggle**: Cycles resolution presets dynamically (`720p` -> `1080p` -> `480p` -> `360p`).
-- **Mirror Deflip**: Toggles horizontal mirroring on TextureView for webcam/selfie framing.
-- **360-Degree Rotation**: Supports full sensor orientation across portrait, landscape, and reverse angles.
+### Controls & Features
+- **Pinch-To-Zoom & Steppers**: Smooth two-finger pinch-to-zoom on the viewfinder or tap floating `[ + ]` and `[ - ]` buttons (0.2x steps).
+- **Exposure Compensation**: Dedicated `[ EV - ]` and `[ EV + ]` stepper buttons with real-time SeekBar and EV label (`+0.5 EV`).
+- **Auto / Manual Focus**: Seamless toggle between continuous Auto Focus (`AF: Auto`) and precision Manual Focus distance slider from Macro (`0.1m`) to Infinity (`Inf`).
+- **Pro Manual Mode (ISO, Shutter, AWB, FX)**:
+  - `ISO`: Auto, 100, 200, 400, 800, 1600.
+  - `Shutter`: Auto, 1/1000s, 1/500s, 1/250s, 1/125s, 1/60s, 1/30s.
+  - `White Balance`: Auto, Daylight, Cloudy, Fluorescent, Tungsten.
+  - `Color Effects`: Color, Black & White (Mono), Negative, Sepia.
+- **Dynamic 4K & High FPS Detection**: Auto-detects supported video resolutions (up to 4K `3840x2160`) and sensor FPS ranges (up to 60 FPS) directly from device hardware.
+- **★ Ultra Photo Capture**: Captures uncompressed still images at the camera sensor's maximum hardware resolution (e.g. 64MP / 48MP / 16MP) and saves directly to disk.
+- **Quick Modes (8 Purpose Presets)**: One-tap profiles for Meetings, Online Class, Streaming, Snapshot, Scan/OCR, Security, Fun Filter, and Pro Manual.
+- **Fullscreen Mode & Floating Overlay**: Tap `⛶` to expand the camera viewport to 100% full screen with a collapsible floating action menu (`⚡`).
 
 ### Multi-Screen & Responsive Device Support
 - **Smartphones (Portrait)**: Full-bleed viewfinder on top with scroll-protected action controls below.
