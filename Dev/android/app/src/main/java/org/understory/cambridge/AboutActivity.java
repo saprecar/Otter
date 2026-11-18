@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 // [AI-BLOCK: Dedicated About & Troubleshooting Window for Otter mobile app]
@@ -26,6 +27,18 @@ public class AboutActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_about);
 
+        // [AI-BLOCK: Populate version from PackageManager at runtime]
+        android.widget.TextView tvVersion = findViewById(R.id.tvAboutVersion);
+        if (tvVersion != null) {
+            try {
+                android.content.pm.PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+                String vName = pInfo.versionName != null ? pInfo.versionName : "1.3.0.0";
+                long vCode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? pInfo.getLongVersionCode() : pInfo.versionCode;
+                tvVersion.setText("Otter v" + vName + " (build " + vCode + ")");
+            } catch (Exception e) {
+                tvVersion.setText("Otter v1.3.0.0");
+            }
+        }
         Button btnClose = findViewById(R.id.btnCloseAbout);
         Button btnOpenRepo = findViewById(R.id.btnOpenRepo);
         Button btnCopyRepo = findViewById(R.id.btnCopyRepo);

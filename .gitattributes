@@ -1,0 +1,11 @@
+# Enforce LF line endings for shell scripts and macOS command files
+*.sh text eol=lf
+*.command text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+
+# Windows batch files require CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf

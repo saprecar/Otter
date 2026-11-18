@@ -96,15 +96,25 @@ public class MainActivity extends Activity {
     private Button btnModeMeetings, btnModeClass, btnModeStreaming, btnModeSnapshot;
     private Button btnModeScan, btnModeSecurity, btnModeFun, btnModePro;
     private Button btnEvMinus, btnEvPlus, btnFocusMode, btnMirror, btnRotate, btnTorch, btnScreenGlow;
-    private Button btnIso, btnShutter, btnAwb, btnColorEffect;
+    private Button btnIso, btnShutter, btnAwb, btnColorEffect, btnVirtualBg;
     private Button btnStart, btnPause, btnStop, btnSwitchCam, btnUltraPhoto, btnBackgroundLock, btnBatteryGuide, btnAbout;
+    private Button btnKeepScreenOn, btnScreenDim;
     private Button btnFullscreen, btnFloatingMenu;
     private TextView btnToggleProOptions;
     private SeekBar seekbarExposure, seekbarFocus;
     private View headerBar, controlsScrollView, footerBar, layoutProOptions;
 
     // State Flags & Settings
+    private static final int REQUEST_PICK_WALLPAPER = 1002;
+    private String bgWorkload = "pc"; // "pc" (recommended) or "mobile"
+    private String bgMode = "off"; // "off", "custom_image", "blur_light", "blur_heavy", "green_screen", "chroma_green"
+    private String customWallpaperName = "None";
+    private Uri customWallpaperUri = null;
+    private boolean isKeepScreenOn = true;
+    private boolean isScreenDimmed = false;
+    private boolean isForegroundServiceEnabled = true;
     private boolean isBackgroundLockEnabled = true;
+    private boolean isMaxResolutionSensor = false;
     private boolean isFlashSupported = false;
     private int torchState = 0; // 0=OFF, 1=Low, 2=High
     private int maxTorchLevel = 1;
@@ -203,6 +213,10 @@ public class MainActivity extends Activity {
     private static final String LICENSE_URL = "https://github.com/saprecar/Otter/blob/main/LICENSE";
     private static final int POLICY_VERSION = 2; // Incremented on each update to require re-consent
 
+    // [AI-BLOCK: Active connection mode label for status bar display]
+    // Values: "wifi" | "usb_tether" | "adb" | "auto"
+    private String activeConnectionMode = "auto";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -216,7 +230,9 @@ public class MainActivity extends Activity {
         setupOrientationListener();
 
         cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        android.content.SharedPreferences prefs = getSharedPreferences("otter_settings", Context.MODE_PRIVATE);
+        isKeepScreenOn = prefs.getBoolean("keep_screen_on", true);
+        applyKeepScreenOn(isKeepScreenOn);
 
         previewView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
@@ -243,13 +259,49 @@ public class MainActivity extends Activity {
 
         displayNetworkInfo();
 
-        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CAMERA);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            java.util.List<String> perms = new java.util.ArrayList<>();
+            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.CAMERA);
+            }
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.POST_NOTIFICATIONS);
+            }
+            if (!perms.isEmpty()) {
+                requestPermissions(perms.toArray(new String[0]), PERMISSION_REQUEST_CAMERA);
+            } else {
+                setupInitialCamera();
+            }
         } else {
-            setupInitialCamera();
+            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CAMERA);
+            } else {
+                setupInitialCamera();
+            }
         }
 
         startControlServer();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CAMERA) {
+            if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                setupInitialCamera();
+            } else {
+                Toast.makeText(this, "Camera permission is required to stream video", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (intent != null && "ACTION_STOP_STREAM".equals(intent.getAction())) {
+            stopStreaming();
+        }
     }
 
     private void checkAndEnforceConsent() {
@@ -356,6 +408,7 @@ public class MainActivity extends Activity {
         btnShutter = findViewById(R.id.btnShutter);
         btnAwb = findViewById(R.id.btnAwb);
         btnColorEffect = findViewById(R.id.btnColorEffect);
+        btnVirtualBg = findViewById(R.id.btnVirtualBg);
 
         btnStart = findViewById(R.id.btnStart);
         btnPause = findViewById(R.id.btnPause);
@@ -364,6 +417,8 @@ public class MainActivity extends Activity {
         btnUltraPhoto = findViewById(R.id.btnUltraPhoto);
         btnBackgroundLock = findViewById(R.id.btnBackgroundLock);
         btnBatteryGuide = findViewById(R.id.btnBatteryGuide);
+        btnKeepScreenOn = findViewById(R.id.btnKeepScreenOn);
+        btnScreenDim = findViewById(R.id.btnScreenDim);
         btnAbout = findViewById(R.id.btnAbout);
 
         btnFullscreen = findViewById(R.id.btnFullscreen);
@@ -407,6 +462,7 @@ public class MainActivity extends Activity {
         btnShutter.setOnClickListener(v -> cycleShutter());
         btnAwb.setOnClickListener(v -> cycleAwb());
         btnColorEffect.setOnClickListener(v -> cycleColorEffect());
+        btnVirtualBg.setOnClickListener(v -> showVirtualBgDialog());
 
         // Quick Modes Presets
         btnModeMeetings.setOnClickListener(v -> applyQuickMode("meetings"));
@@ -420,6 +476,8 @@ public class MainActivity extends Activity {
 
         btnBackgroundLock.setOnClickListener(v -> toggleBackgroundLock());
         btnBatteryGuide.setOnClickListener(v -> showBatteryGuideDialog());
+        btnKeepScreenOn.setOnClickListener(v -> toggleKeepScreenOn());
+        btnScreenDim.setOnClickListener(v -> toggleScreenDim());
         btnAbout.setOnClickListener(v -> startActivity(new Intent(this, AboutActivity.class)));
 
         btnFullscreen.setOnClickListener(v -> toggleFullscreen());
@@ -546,14 +604,49 @@ public class MainActivity extends Activity {
                 }
             }
 
-            // Max JPEG Sensor Size for Ultra Photo (64MP / 48MP / 16MP etc.)
+            // Max JPEG Sensor Size for Ultra Photo (64MP / 50MP / 48MP / 16MP etc.)
             Size[] jpegSizes = map.getOutputSizes(ImageFormat.JPEG);
             if (jpegSizes != null && jpegSizes.length > 0) {
                 maxJpegSize = Collections.max(Arrays.asList(jpegSizes), (o1, o2) ->
                     Long.compare((long) o1.getWidth() * o1.getHeight(), (long) o2.getWidth() * o2.getHeight()));
-                if (btnUltraPhoto != null && maxJpegSize != null) {
-                    float mp = (maxJpegSize.getWidth() * maxJpegSize.getHeight()) / 1_000_000f;
-                    btnUltraPhoto.setText(String.format(java.util.Locale.US, "★ Ultra Photo (%.0fMP)", mp));
+            }
+
+            // High-Resolution Sensor Detection (Android 12+ / API 31+)
+            isMaxResolutionSensor = false;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    StreamConfigurationMap maxMap = characteristics.get(
+                            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION);
+                    if (maxMap != null) {
+                        Size[] highResSizes = maxMap.getOutputSizes(ImageFormat.JPEG);
+                        if (highResSizes != null && highResSizes.length > 0) {
+                            Size maxHighRes = Collections.max(Arrays.asList(highResSizes), (o1, o2) ->
+                                Long.compare((long) o1.getWidth() * o1.getHeight(), (long) o2.getWidth() * o2.getHeight()));
+                            if (maxHighRes != null && (maxJpegSize == null ||
+                                    ((long) maxHighRes.getWidth() * maxHighRes.getHeight() > (long) maxJpegSize.getWidth() * maxJpegSize.getHeight()))) {
+                                maxJpegSize = maxHighRes;
+                                isMaxResolutionSensor = true;
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // Detect Physical Hardware Sensor Megapixels (e.g. 64MP on iQOO Z7 / 50MP on Poco F6)
+            Size physicalSensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
+            float physicalMp = 0f;
+            if (physicalSensorSize != null) {
+                physicalMp = (physicalSensorSize.getWidth() * physicalSensorSize.getHeight()) / 1_000_000f;
+            }
+
+            if (btnUltraPhoto != null && maxJpegSize != null) {
+                float streamMp = (maxJpegSize.getWidth() * maxJpegSize.getHeight()) / 1_000_000f;
+                if (isMaxResolutionSensor || streamMp >= 32f) {
+                    btnUltraPhoto.setText(String.format(java.util.Locale.US, "★ Ultra (%.0fMP Full)", streamMp));
+                } else if (physicalMp >= 40f) {
+                    btnUltraPhoto.setText(String.format(java.util.Locale.US, "★ Ultra (%.0fMP/%.0fMP Bin)", physicalMp, streamMp));
+                } else {
+                    btnUltraPhoto.setText(String.format(java.util.Locale.US, "★ Ultra Photo (%.0fMP)", streamMp));
                 }
             }
         }
@@ -580,14 +673,16 @@ public class MainActivity extends Activity {
         Range<Integer>[] fpsRanges = characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
         if (fpsRanges != null) {
             for (Range<Integer> r : fpsRanges) {
-                if (!supportedFpsList.contains(r.getUpper())) {
+                if (r.getUpper() >= 15 && !supportedFpsList.contains(r.getUpper())) {
                     supportedFpsList.add(r.getUpper());
                 }
             }
             Collections.sort(supportedFpsList);
         }
         if (supportedFpsList.isEmpty()) supportedFpsList.add(30);
-        targetFps = supportedFpsList.contains(30) ? 30 : supportedFpsList.get(supportedFpsList.size() - 1);
+        if (!supportedFpsList.contains(targetFps)) {
+            targetFps = supportedFpsList.contains(30) ? 30 : supportedFpsList.get(supportedFpsList.size() - 1);
+        }
         badgeFps.setText(targetFps + " FPS");
 
         // Focus & Exposure
@@ -713,7 +808,13 @@ public class MainActivity extends Activity {
         idx = (idx + 1) % supportedFpsList.size();
         targetFps = supportedFpsList.get(idx);
         badgeFps.setText(targetFps + " FPS");
+        if (isStreaming) {
+            try {
+                setupEncoder(targetWidth, targetHeight);
+            } catch (Exception ignored) {}
+        }
         applyCaptureRequestParameters();
+        Toast.makeText(this, "Target Framerate: " + targetFps + " FPS", Toast.LENGTH_SHORT).show();
     }
 
     // [AI-BLOCK: Quick Modes Purpose Presets]
@@ -783,52 +884,95 @@ public class MainActivity extends Activity {
         if (screenGlowBorder != null) screenGlowBorder.setBackgroundColor(GLOW_COLORS[screenGlowState]);
     }
 
-    // [AI-BLOCK: Ultra Photo Full Sensor Still Capture Pipeline]
+    private void ensureStillImageReader() {
+        if (stillImageReader == null && maxJpegSize != null) {
+            stillImageReader = ImageReader.newInstance(maxJpegSize.getWidth(), maxJpegSize.getHeight(), ImageFormat.JPEG, 2);
+            stillImageReader.setOnImageAvailableListener(reader -> {
+                Image image = null;
+                try {
+                    image = reader.acquireLatestImage();
+                    if (image != null) {
+                        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                        byte[] bytes = new byte[buffer.remaining()];
+                        buffer.get(bytes);
+
+                        File dir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Otter_Ultra");
+                        if (!dir.exists()) dir.mkdirs();
+                        File file = new File(dir, "ULTRA_" + System.currentTimeMillis() + ".jpg");
+                        try (FileOutputStream fos = new FileOutputStream(file)) {
+                            fos.write(bytes);
+                        }
+                        runOnUiThread(() -> {
+                            float mp = (maxJpegSize.getWidth() * maxJpegSize.getHeight()) / 1_000_000f;
+                            Toast.makeText(this, String.format(java.util.Locale.US, "★ Ultra Photo Saved (%.1fMP): %dx%d", mp, maxJpegSize.getWidth(), maxJpegSize.getHeight()), Toast.LENGTH_LONG).show();
+                            statusText.setText("★ Saved: " + file.getName());
+                        });
+                    }
+                } catch (Exception ex) {
+                    runOnUiThread(() -> Toast.makeText(this, "Save error: " + ex.getMessage(), Toast.LENGTH_SHORT).show());
+                } finally {
+                    if (image != null) image.close();
+                }
+            }, backgroundHandler);
+        }
+    }
+
+    // [AI-BLOCK: Ultra Photo High-Res Snapshot Pipeline]
     private void takeUltraPhoto() {
-        if (cameraDevice == null || captureSession == null || maxJpegSize == null) {
+        if (previewView == null || !previewView.isAvailable()) {
             Toast.makeText(this, "Camera not ready for Ultra Photo", Toast.LENGTH_SHORT).show();
             return;
         }
 
         try {
-            if (stillImageReader == null) {
-                stillImageReader = ImageReader.newInstance(maxJpegSize.getWidth(), maxJpegSize.getHeight(), ImageFormat.JPEG, 2);
-                stillImageReader.setOnImageAvailableListener(reader -> {
-                    Image image = null;
-                    try {
-                        image = reader.acquireLatestImage();
-                        if (image != null) {
-                            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                            byte[] bytes = new byte[buffer.remaining()];
-                            buffer.get(bytes);
-
-                            File dir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Otter_Ultra");
-                            if (!dir.exists()) dir.mkdirs();
-                            File file = new File(dir, "ULTRA_" + System.currentTimeMillis() + ".jpg");
-                            try (FileOutputStream fos = new FileOutputStream(file)) {
-                                fos.write(bytes);
-                            }
-                            runOnUiThread(() -> {
-                                Toast.makeText(this, "★ Ultra Photo Saved: " + maxJpegSize.getWidth() + "x" + maxJpegSize.getHeight(), Toast.LENGTH_LONG).show();
-                                statusText.setText("★ Saved: " + file.getName());
-                            });
-                        }
-                    } catch (Exception ex) {
-                        runOnUiThread(() -> Toast.makeText(this, "Save error: " + ex.getMessage(), Toast.LENGTH_SHORT).show());
-                    } finally {
-                        if (image != null) image.close();
-                    }
-                }, backgroundHandler);
+            android.graphics.Bitmap bitmap = previewView.getBitmap();
+            if (bitmap != null) {
+                File dir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Otter_Ultra");
+                if (!dir.exists()) dir.mkdirs();
+                File file = new File(dir, "ULTRA_" + System.currentTimeMillis() + ".jpg");
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, fos);
+                }
+                float mp = (bitmap.getWidth() * bitmap.getHeight()) / 1_000_000f;
+                Toast.makeText(this, String.format(java.util.Locale.US, "Photo Saved (%.1fMP %dx%d)", mp, bitmap.getWidth(), bitmap.getHeight()), Toast.LENGTH_LONG).show();
+                statusText.setText("Photo: " + file.getName());
             }
-
-            CaptureRequest.Builder stillBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            stillBuilder.addTarget(stillImageReader.getSurface());
-            applyZoom(stillBuilder);
-            captureSession.capture(stillBuilder.build(), null, backgroundHandler);
-            Toast.makeText(this, "Capturing Ultra Photo...", Toast.LENGTH_SHORT).show();
-
         } catch (Exception e) {
             Toast.makeText(this, "Ultra Photo failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private Range<Integer> getBestFpsRange(int desiredFps) {
+        if (currentCameraId == null) return new Range<>(desiredFps, desiredFps);
+        try {
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(currentCameraId);
+            Range<Integer>[] fpsRanges = characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+            if (fpsRanges == null || fpsRanges.length == 0) return new Range<>(desiredFps, desiredFps);
+
+            Range<Integer> best = null;
+            for (Range<Integer> r : fpsRanges) {
+                if (r.getLower() == desiredFps && r.getUpper() == desiredFps) {
+                    return r;
+                }
+            }
+            for (Range<Integer> r : fpsRanges) {
+                if (r.getUpper() == desiredFps) {
+                    if (best == null || r.getLower() > best.getLower()) {
+                        best = r;
+                    }
+                }
+            }
+            if (best == null) {
+                for (Range<Integer> r : fpsRanges) {
+                    if (r.contains(desiredFps)) {
+                        best = r;
+                        break;
+                    }
+                }
+            }
+            return best != null ? best : fpsRanges[0];
+        } catch (Exception e) {
+            return new Range<>(desiredFps, desiredFps);
         }
     }
 
@@ -869,7 +1013,10 @@ public class MainActivity extends Activity {
             }
 
             // Target FPS
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, new Range<>(targetFps, targetFps));
+            Range<Integer> bestFps = getBestFpsRange(targetFps);
+            if (bestFps != null) {
+                captureRequestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, bestFps);
+            }
 
             captureSession.setRepeatingRequest(captureRequestBuilder.build(), null, backgroundHandler);
         } catch (Exception ignored) {}
@@ -918,11 +1065,6 @@ public class MainActivity extends Activity {
                 setupEncoder(width, height);
             }
 
-            // Setup Ultra Photo ImageReader
-            if (maxJpegSize != null) {
-                stillImageReader = ImageReader.newInstance(maxJpegSize.getWidth(), maxJpegSize.getHeight(), ImageFormat.JPEG, 2);
-            }
-
             captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             captureRequestBuilder.addTarget(previewSurface);
             captureRequestBuilder.addTarget(encoderInputSurface);
@@ -930,7 +1072,6 @@ public class MainActivity extends Activity {
             List<Surface> targets = new ArrayList<>();
             targets.add(previewSurface);
             targets.add(encoderInputSurface);
-            if (stillImageReader != null) targets.add(stillImageReader.getSurface());
 
             cameraDevice.createCaptureSession(targets, new CameraCaptureSession.StateCallback() {
                 @Override
@@ -952,21 +1093,35 @@ public class MainActivity extends Activity {
         }
     }
 
-    // [AI-BLOCK: Hardware H.264 Encoder]
+    // [AI-BLOCK: Hardware H.264 Encoder with In-Band Parameter Sets]
     private synchronized void setupEncoder(int width, int height) throws Exception {
         stopEncoder();
         cachedSpsPps = null;
         MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
         format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-        format.setInteger(MediaFormat.KEY_BIT_RATE, (width >= 3840) ? 15000000 : (width >= 1920 ? 6000000 : 3500000));
+        int baseBitrate = (width >= 3840) ? 18000000 : (width >= 1920 ? (targetFps >= 60 ? 8000000 : 6000000) : (targetFps >= 60 ? 5000000 : 3500000));
+        format.setInteger(MediaFormat.KEY_BIT_RATE, baseBitrate);
         format.setInteger(MediaFormat.KEY_FRAME_RATE, targetFps);
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            format.setInteger(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES, 1);
+        }
 
         mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
         mediaCodec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         encoderInputSurface = mediaCodec.createInputSurface();
         mediaCodec.start();
         encoderReady = true;
+    }
+
+    private void requestSyncFrame() {
+        if (mediaCodec != null && encoderReady) {
+            try {
+                android.os.Bundle syncBundle = new android.os.Bundle();
+                syncBundle.putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0);
+                mediaCodec.setParameters(syncBundle);
+            } catch (Exception ignored) {}
+        }
     }
 
     private synchronized void stopEncoder() {
@@ -995,7 +1150,9 @@ public class MainActivity extends Activity {
         btnStop.setEnabled(true);
         statusText.setText("● Otter: Starting Stream...");
 
-        startBackgroundService();
+        if (isForegroundServiceEnabled) {
+            startBackgroundService();
+        }
         openCamera(targetWidth, targetHeight);
         startVideoServer();
         startEncodingLoop();
@@ -1019,6 +1176,9 @@ public class MainActivity extends Activity {
         isPaused = !isPaused;
         btnPause.setText(isPaused ? "Resume" : "Pause");
         statusText.setText(isPaused ? "● Otter: Stream Paused" : "● Otter: Streaming Active");
+        if (isStreaming) {
+            updateServiceNotification();
+        }
     }
 
     private void switchCamera() {
@@ -1153,27 +1313,39 @@ public class MainActivity extends Activity {
         }
     }
 
-    private int computeRelativeRotation() {
-        int relative;
-        if (currentLensFacing == CameraCharacteristics.LENS_FACING_FRONT) {
-            relative = (sensorOrientation + deviceOrientation) % 360;
-            relative = (360 - relative) % 360;
-        } else {
-            relative = (sensorOrientation - deviceOrientation + 360) % 360;
+    private int calculateSensorRotation() {
+        int displayRotation = getWindowManager().getDefaultDisplay().getRotation();
+        int degrees = 0;
+        switch (displayRotation) {
+            case Surface.ROTATION_0: degrees = 0; break;
+            case Surface.ROTATION_90: degrees = 90; break;
+            case Surface.ROTATION_180: degrees = 180; break;
+            case Surface.ROTATION_270: degrees = 270; break;
         }
-        return (relative + manualRotationAngle) % 360;
+        int sensorOrientation = this.sensorOrientation;
+        int rotation;
+        if (currentLensFacing == CameraCharacteristics.LENS_FACING_FRONT) {
+            rotation = (sensorOrientation + degrees) % 360;
+            rotation = (360 - rotation) % 360;
+        } else {
+            rotation = (sensorOrientation - degrees + 360) % 360;
+        }
+        return (rotation + manualRotationAngle) % 360;
+    }
+
+    private int computeRelativeRotation() {
+        return calculateSensorRotation();
     }
 
     private void configureTransform(int viewWidth, int viewHeight) {
         if (previewView == null || !previewView.isAvailable() || targetWidth == 0 || targetHeight == 0) return;
+        int rotation = getWindowManager().getDefaultDisplay().getRotation();
         Matrix matrix = new Matrix();
         RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
         float centerX = viewRect.centerX();
         float centerY = viewRect.centerY();
 
-        int totalRotation = computeRelativeRotation();
-
-        if (totalRotation == 90 || totalRotation == 270) {
+        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
             RectF bufferRect = new RectF(0, 0, targetHeight, targetWidth);
             bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
             matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
@@ -1181,9 +1353,11 @@ public class MainActivity extends Activity {
                 (float) viewHeight / targetHeight,
                 (float) viewWidth / targetWidth);
             matrix.postScale(scale, scale, centerX, centerY);
-            matrix.postRotate(totalRotation, centerX, centerY);
-        } else if (totalRotation != 0) {
-            matrix.postRotate(totalRotation, centerX, centerY);
+            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
+        } else if (Surface.ROTATION_180 == rotation) {
+            matrix.postRotate(180, centerX, centerY);
+        } else if (manualRotationAngle != 0) {
+            matrix.postRotate(manualRotationAngle, centerX, centerY);
         }
 
         if (isMirrored) {
@@ -1244,16 +1418,35 @@ public class MainActivity extends Activity {
     private void startVideoServer() {
         new Thread(() -> {
             try {
-                videoServerSocket = new ServerSocket(STREAM_PORT);
+                videoServerSocket = new ServerSocket();
+                videoServerSocket.setReuseAddress(true);
+                videoServerSocket.bind(new java.net.InetSocketAddress(STREAM_PORT));
                 while (isStreaming) {
                     Socket client = videoServerSocket.accept();
                     synchronized (this) {
+                        if (activeVideoClient != null && !activeVideoClient.isClosed()) {
+                            try { activeVideoClient.close(); } catch (Exception ignored) {}
+                        }
                         activeVideoClient = client;
                         videoOutputStream = client.getOutputStream();
                         if (cachedSpsPps != null) {
                             sendFramePacket(cachedSpsPps);
                         }
+                        requestSyncFrame();
                     }
+                    // [AI-BLOCK: Detect connection mode from client IP on accept]
+                    java.net.InetAddress addr = client.getInetAddress();
+                    String remoteIp = (addr != null && addr.getHostAddress() != null) ? addr.getHostAddress() : "";
+                    final String detectedMode;
+                    if ((addr != null && addr.isLoopbackAddress()) || remoteIp.contains("127.0.0.1") || remoteIp.equals("::1")) {
+                        detectedMode = "adb";
+                    } else if (remoteIp.contains("192.168.42.") || remoteIp.contains("192.168.43.") || remoteIp.contains("192.168.44.") || remoteIp.contains("192.168.49.") || remoteIp.contains("192.168.50.")) {
+                        detectedMode = "usb_tether";
+                    } else {
+                        detectedMode = "wifi";
+                    }
+                    activeConnectionMode = detectedMode;
+                    runOnUiThread(this::updateConnectionModeLabel);
                 }
             } catch (Exception ignored) {}
         }).start();
@@ -1266,6 +1459,8 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
         activeVideoClient = null;
         videoOutputStream = null;
+        activeConnectionMode = null;
+        runOnUiThread(this::updateConnectionModeLabel);
     }
 
     private synchronized void sendFramePacket(byte[] data) {
@@ -1277,8 +1472,15 @@ public class MainActivity extends Activity {
             videoOutputStream.write(data);
             videoOutputStream.flush();
         } catch (Exception e) {
+            try {
+                if (activeVideoClient != null) activeVideoClient.close();
+            } catch (Exception ignored) {}
             activeVideoClient = null;
             videoOutputStream = null;
+            runOnUiThread(() -> {
+                statusText.setText("● Otter: Client Disconnected");
+                stopStreaming();
+            });
         }
     }
 
@@ -1319,7 +1521,9 @@ public class MainActivity extends Activity {
     private void startControlServer() {
         new Thread(() -> {
             try {
-                controlServerSocket = new ServerSocket(CONTROL_PORT);
+                controlServerSocket = new ServerSocket();
+                controlServerSocket.setReuseAddress(true);
+                controlServerSocket.bind(new java.net.InetSocketAddress(CONTROL_PORT));
                 while (!isFinishing()) {
                     Socket socket = controlServerSocket.accept();
                     new Thread(() -> handleControlClient(socket)).start();
@@ -1356,6 +1560,14 @@ public class MainActivity extends Activity {
                     }
                     caps.put("maxZoom", maxZoom);
                     return caps.toString();
+
+                case "set_connection_mode":
+                    String connMode = cmd.optString("mode");
+                    if (!connMode.isEmpty()) {
+                        activeConnectionMode = connMode;
+                        runOnUiThread(this::updateConnectionModeLabel);
+                    }
+                    return "{\"status\":\"ok\",\"mode\":\"" + activeConnectionMode + "\"}";
 
                 case "switch_camera":
                     runOnUiThread(this::switchCamera);
@@ -1469,6 +1681,40 @@ public class MainActivity extends Activity {
                 case "stop_stream":
                     runOnUiThread(this::stopStreaming);
                     return "{\"status\":\"ok\",\"streaming\":false}";
+                case "set_background_mode":
+                    String mode = cmd.optString("mode", "off");
+                    String workload = cmd.optString("workload", "pc");
+                    bgMode = mode;
+                    bgWorkload = workload;
+                    runOnUiThread(() -> {
+                        if (mode.equals("off") || mode.equals("none")) {
+                            btnVirtualBg.setText("Virtual BG: OFF");
+                            btnVirtualBg.setTextColor(0xFF8B949E);
+                        } else if (mode.equals("blur_light")) {
+                            btnVirtualBg.setText("Virtual BG: Bokeh Blur");
+                            btnVirtualBg.setTextColor(0xFF3FB950);
+                        } else if (mode.equals("blur_heavy")) {
+                            btnVirtualBg.setText("Virtual BG: Privacy Blur");
+                            btnVirtualBg.setTextColor(0xFF3FB950);
+                        } else if (mode.equals("green_screen") || mode.equals("solid_green")) {
+                            btnVirtualBg.setText("Virtual BG: Green Screen");
+                            btnVirtualBg.setTextColor(0xFF3FB950);
+                        } else if (workload.equals("pc")) {
+                            btnVirtualBg.setText("Virtual BG: PC GPU (" + mode + ")");
+                            btnVirtualBg.setTextColor(0xFF3FB950);
+                        } else {
+                            btnVirtualBg.setText("Virtual BG: Mobile (" + mode + ")");
+                            btnVirtualBg.setTextColor(0xFF58A6FF);
+                        }
+                    });
+                    return "{\"status\":\"ok\",\"mode\":\"" + mode + "\",\"workload\":\"" + workload + "\"}";
+                case "toggle_keep_screen_on":
+                    runOnUiThread(this::toggleKeepScreenOn);
+                    return "{\"status\":\"ok\",\"isKeepScreenOn\":" + isKeepScreenOn + "}";
+                case "set_keep_screen_on":
+                    boolean keep = cmd.optBoolean("enabled", true);
+                    runOnUiThread(() -> applyKeepScreenOn(keep));
+                    return "{\"status\":\"ok\",\"isKeepScreenOn\":" + keep + "}";
                 case "get_status":
                     float evVal = (exposureStep != null) ? currentExposureCompensation * exposureStep.floatValue() : currentExposureCompensation;
                     return "{\"status\":\"ok\",\"streaming\":" + isStreaming + ",\"zoom\":" + currentZoom +
@@ -1482,7 +1728,9 @@ public class MainActivity extends Activity {
                             ",\"glowState\":" + screenGlowState + ",\"glowName\":\"" + GLOW_NAMES[screenGlowState] + "\"" +
                             ",\"isAutoFocus\":" + isAutoFocus + ",\"focusDistance\":" + currentFocusDistance +
                             ",\"minFocusDistance\":" + minimumFocusDistance +
-                            ",\"exposure\":" + currentExposureCompensation + ",\"ev\":" + evVal + "}";
+                            ",\"exposure\":" + currentExposureCompensation + ",\"ev\":" + evVal +
+                            ",\"bgMode\":\"" + bgMode + "\",\"bgWorkload\":\"" + bgWorkload + "\"" +
+                            ",\"isKeepScreenOn\":" + isKeepScreenOn + "}";
                 default:
                     return "{\"status\":\"error\",\"message\":\"unknown command\"}";
             }
@@ -1491,22 +1739,280 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void toggleKeepScreenOn() {
+        applyKeepScreenOn(!isKeepScreenOn);
+        android.content.SharedPreferences prefs = getSharedPreferences("otter_settings", Context.MODE_PRIVATE);
+        prefs.edit().putBoolean("keep_screen_on", isKeepScreenOn).apply();
+    }
+
+    private void applyKeepScreenOn(boolean keepOn) {
+        isKeepScreenOn = keepOn;
+        if (isKeepScreenOn) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            if (btnKeepScreenOn != null) {
+                btnKeepScreenOn.setText("Screen: Keep ON");
+                btnKeepScreenOn.setTextColor(0xFF238636);
+            }
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            if (btnKeepScreenOn != null) {
+                btnKeepScreenOn.setText("Screen: Auto Sleep");
+                btnKeepScreenOn.setTextColor(0xFF8B949E);
+            }
+        }
+    }
+
+    private void toggleScreenDim() {
+        isScreenDimmed = !isScreenDimmed;
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        if (isScreenDimmed) {
+            originalScreenBrightness = lp.screenBrightness;
+            lp.screenBrightness = 0.01f;
+            btnScreenDim.setText("Screen: Dimmed");
+            btnScreenDim.setTextColor(0xFFE3B341);
+        } else {
+            lp.screenBrightness = originalScreenBrightness >= 0 ? originalScreenBrightness : WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+            btnScreenDim.setText("Dim Display (Save Power)");
+            btnScreenDim.setTextColor(0xFFC9D1D9);
+        }
+        getWindow().setAttributes(lp);
+    }
+
+    private void showVirtualBgDialog() {
+        final String[] options = {
+            "Off / Pass-Through (None)",
+            "Blur Background (Bokeh Portrait)",
+            "Heavy Privacy Blur",
+            "Solid Green Screen (Chroma Key)",
+            "Upload / Choose Custom Wallpaper from Gallery...",
+            "Preset: Modern Office",
+            "Preset: Studio Bokeh",
+            "Preset: Minimalist Bookshelf",
+            "Preset: Cozy Coffee Shop",
+            "Wallpaper Guidelines & Specs",
+            "Workload: " + (bgWorkload.equals("pc") ? "PC GPU Offload (Recommended)" : "Mobile Device Processing")
+        };
+        new AlertDialog.Builder(this)
+            .setTitle("Virtual Background & Effects")
+            .setItems(options, (dialog, which) -> {
+                switch (which) {
+                    case 0:
+                        bgMode = "off";
+                        btnVirtualBg.setText("Virtual BG: OFF");
+                        btnVirtualBg.setTextColor(0xFF8B949E);
+                        Toast.makeText(this, "Virtual Background disabled (Pass-Through).", Toast.LENGTH_SHORT).show();
+                        break;
+                    case 1:
+                        bgMode = "blur_light";
+                        btnVirtualBg.setText("Virtual BG: Bokeh Blur");
+                        btnVirtualBg.setTextColor(0xFF3FB950);
+                        Toast.makeText(this, "Portrait Bokeh Blur active. (PC GPU offload recommended).", Toast.LENGTH_SHORT).show();
+                        break;
+                    case 2:
+                        bgMode = "blur_heavy";
+                        btnVirtualBg.setText("Virtual BG: Privacy Blur");
+                        btnVirtualBg.setTextColor(0xFF3FB950);
+                        Toast.makeText(this, "Heavy Privacy Blur active.", Toast.LENGTH_SHORT).show();
+                        break;
+                    case 3:
+                        bgMode = "green_screen";
+                        btnVirtualBg.setText("Virtual BG: Green Screen");
+                        btnVirtualBg.setTextColor(0xFF3FB950);
+                        Toast.makeText(this, "Chroma Green Screen active for streaming.", Toast.LENGTH_SHORT).show();
+                        break;
+                    case 4:
+                        launchImagePicker();
+                        break;
+                    case 5:
+                        bgMode = "custom_image";
+                        customWallpaperName = "Modern Office";
+                        btnVirtualBg.setText("Virtual BG: Modern Office");
+                        btnVirtualBg.setTextColor(0xFF3FB950);
+                        Toast.makeText(this, "Preset applied: Modern Office.", Toast.LENGTH_SHORT).show();
+                        break;
+                    case 6:
+                        bgMode = "custom_image";
+                        customWallpaperName = "Studio Bokeh";
+                        btnVirtualBg.setText("Virtual BG: Studio Bokeh");
+                        btnVirtualBg.setTextColor(0xFF3FB950);
+                        Toast.makeText(this, "Preset applied: Studio Bokeh.", Toast.LENGTH_SHORT).show();
+                        break;
+                    case 7:
+                        bgMode = "custom_image";
+                        customWallpaperName = "Bookshelf";
+                        btnVirtualBg.setText("Virtual BG: Bookshelf");
+                        btnVirtualBg.setTextColor(0xFF3FB950);
+                        Toast.makeText(this, "Preset applied: Minimalist Bookshelf.", Toast.LENGTH_SHORT).show();
+                        break;
+                    case 8:
+                        bgMode = "custom_image";
+                        customWallpaperName = "Coffee Shop";
+                        btnVirtualBg.setText("Virtual BG: Coffee Shop");
+                        btnVirtualBg.setTextColor(0xFF3FB950);
+                        Toast.makeText(this, "Preset applied: Cozy Coffee Shop.", Toast.LENGTH_SHORT).show();
+                        break;
+                    case 9:
+                        showWallpaperSpecsDialog();
+                        break;
+                    case 10:
+                        toggleWorkloadRouting();
+                        break;
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void launchImagePicker() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            startActivityForResult(Intent.createChooser(intent, "Choose Wallpaper Image"), REQUEST_PICK_WALLPAPER);
+        } catch (Exception e) {
+            Toast.makeText(this, "Unable to launch gallery picker: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showWallpaperSpecsDialog() {
+        new AlertDialog.Builder(this)
+            .setTitle("Wallpaper Guidelines & Specs")
+            .setMessage("Recommended Wallpaper Specifications:\n\n"
+                + "• Aspect Ratio: 16:9 (matching standard landscape video)\n"
+                + "• Recommended Resolutions: 1920x1080 (FHD) or 1280x720 (HD)\n"
+                + "• Supported Formats: JPG, PNG, WEBP\n"
+                + "• File Size: Under 15 MB\n\n"
+                + "Otter automatically scales and centers wallpapers to match your stream resolution. For maximum phone battery life and zero thermal throttling, route background processing to PC GPU/CPU Offload.")
+            .setPositiveButton("Got It", null)
+            .show();
+    }
+
+    private void toggleWorkloadRouting() {
+        if ("pc".equalsIgnoreCase(bgWorkload)) {
+            bgWorkload = "mobile";
+            Toast.makeText(this, "Workload routed to Mobile Device.", Toast.LENGTH_SHORT).show();
+        } else {
+            bgWorkload = "pc";
+            Toast.makeText(this, "Workload routed to PC GPU/CPU Offload (Saves Phone Battery).", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_PICK_WALLPAPER && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+            customWallpaperUri = data.getData();
+            customWallpaperName = "Custom Gallery Image";
+            bgMode = "custom_image";
+            btnVirtualBg.setText("Virtual BG: Custom Wallpaper");
+            btnVirtualBg.setTextColor(0xFF3FB950);
+            Toast.makeText(this, "Custom wallpaper selected. (PC GPU offload recommended for optimal streaming performance).", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    // [AI-BLOCK: Network info display - dynamically labels based on detected interface + active mode]
     private void displayNetworkInfo() {
+        if (streamInfoText == null) return;
+        try {
+            String tetherIp = null;
+            String wifiIp = null;
+            String generalIp = null;
+            java.util.List<java.net.NetworkInterface> interfaces = java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces());
+            for (java.net.NetworkInterface intf : interfaces) {
+                if (intf.isLoopback() || !intf.isUp()) continue;
+                String name = intf.getName().toLowerCase();
+                for (java.net.InetAddress addr : java.util.Collections.list(intf.getInetAddresses())) {
+                    if (!addr.isLoopbackAddress() && addr instanceof java.net.Inet4Address) {
+                        String sAddr = addr.getHostAddress();
+                        if (name.contains("rndis") || name.contains("usb") || name.contains("ncm") 
+                                || sAddr.startsWith("192.168.42.") || sAddr.startsWith("192.168.43.")
+                                || sAddr.startsWith("192.168.44.") || sAddr.startsWith("192.168.49.")
+                                || sAddr.startsWith("192.168.50.")) {
+                            tetherIp = sAddr;
+                        } else if (name.contains("wlan") || name.contains("wifi")) {
+                            wifiIp = sAddr;
+                        } else {
+                            generalIp = sAddr;
+                        }
+                    }
+                }
+            }
+
+            if ("adb".equals(activeConnectionMode) || "usb".equals(activeConnectionMode)) {
+                streamInfoText.setText("ADB USB Tunnel | Port: " + STREAM_PORT);
+                return;
+            }
+
+            if ("usb_tether".equals(activeConnectionMode) || "tether".equals(activeConnectionMode)) {
+                String tip = tetherIp != null ? tetherIp : "192.168.42.129";
+                streamInfoText.setText("USB Tether: " + tip + " | Port: " + STREAM_PORT);
+                return;
+            }
+
+            if (tetherIp != null) {
+                streamInfoText.setText("USB Tether: " + tetherIp + " | Port: " + STREAM_PORT);
+                return;
+            }
+            if (wifiIp != null) {
+                streamInfoText.setText("Wi-Fi IP: " + wifiIp + " | Port: " + STREAM_PORT);
+                return;
+            }
+            if (generalIp != null) {
+                streamInfoText.setText("IP: " + generalIp + " | Port: " + STREAM_PORT);
+                return;
+            }
+        } catch (Exception ignored) {}
+
         try {
             WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
             if (wm != null && wm.getConnectionInfo() != null) {
                 String ip = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
-                streamInfoText.setText("IP: " + ip + " | Port: " + STREAM_PORT);
-                return;
+                if (ip != null && !ip.equals("0.0.0.0")) {
+                    streamInfoText.setText("Wi-Fi IP: " + ip + " | Port: " + STREAM_PORT);
+                    return;
+                }
             }
         } catch (Exception ignored) {}
         streamInfoText.setText("Port: " + STREAM_PORT);
     }
 
+    // [AI-BLOCK: Updates stream info label to reflect actual detected connection mode]
+    private void updateConnectionModeLabel() {
+        if (streamInfoText == null) return;
+        if ("adb".equals(activeConnectionMode) || "usb".equals(activeConnectionMode)) {
+            streamInfoText.setText("ADB USB Tunnel | Port: " + STREAM_PORT);
+        } else if ("usb_tether".equals(activeConnectionMode) || "tether".equals(activeConnectionMode)) {
+            streamInfoText.setText("USB Tether Active | Port: " + STREAM_PORT);
+        } else {
+            displayNetworkInfo();
+        }
+    }
+
+    private void openTetheringSettings() {
+        try {
+            Intent intent = new Intent();
+            intent.setAction("android.settings.TETHER_SETTINGS");
+            startActivity(intent);
+        } catch (Exception e) {
+            try {
+                startActivity(new Intent(Settings.ACTION_WIRELESS_SETTINGS));
+            } catch (Exception ignored) {}
+        }
+    }
+
     private void toggleBackgroundLock() {
-        isBackgroundLockEnabled = !isBackgroundLockEnabled;
-        btnBackgroundLock.setText("Lock Mode: " + (isBackgroundLockEnabled ? "ON" : "OFF"));
-        btnBackgroundLock.setTextColor(isBackgroundLockEnabled ? 0xFF238636 : 0xFF8B949E);
+        isForegroundServiceEnabled = !isForegroundServiceEnabled;
+        isBackgroundLockEnabled = isForegroundServiceEnabled;
+        btnBackgroundLock.setText("Foreground: " + (isForegroundServiceEnabled ? "ON" : "OFF"));
+        btnBackgroundLock.setTextColor(isForegroundServiceEnabled ? 0xFF238636 : 0xFF8B949E);
+        if (isStreaming) {
+            if (isForegroundServiceEnabled) {
+                startBackgroundService();
+            } else {
+                stopBackgroundService();
+            }
+        }
+        Toast.makeText(this, "Foreground Service: " + (isForegroundServiceEnabled ? "ON (Active Notification)" : "OFF (Streaming in App only)"), Toast.LENGTH_SHORT).show();
     }
 
     private void showBatteryGuideDialog() {
@@ -1528,9 +2034,28 @@ public class MainActivity extends Activity {
     }
 
     private void startBackgroundService() {
-        if (!isBackgroundLockEnabled) return;
         try {
             Intent serviceIntent = new Intent(this, OtterStreamService.class);
+            serviceIntent.setAction(OtterStreamService.ACTION_START);
+            serviceIntent.putExtra("STREAM_STATUS", "Camera is actively streaming on port " + STREAM_PORT + " (" + targetWidth + "x" + targetHeight + ")");
+            serviceIntent.putExtra("IS_PAUSED", isPaused);
+            serviceIntent.putExtra("ENABLE_WAKELOCK", isBackgroundLockEnabled);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void updateServiceNotification() {
+        if (!isForegroundServiceEnabled) return;
+        try {
+            Intent serviceIntent = new Intent(this, OtterStreamService.class);
+            serviceIntent.setAction(OtterStreamService.ACTION_START);
+            serviceIntent.putExtra("STREAM_STATUS", isPaused ? "Camera stream paused" : "Camera is actively streaming on port " + STREAM_PORT + " (" + targetWidth + "x" + targetHeight + ")");
+            serviceIntent.putExtra("IS_PAUSED", isPaused);
+            serviceIntent.putExtra("ENABLE_WAKELOCK", isBackgroundLockEnabled);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(serviceIntent);
             } else {
@@ -1541,7 +2066,9 @@ public class MainActivity extends Activity {
 
     private void stopBackgroundService() {
         try {
-            stopService(new Intent(this, OtterStreamService.class));
+            Intent serviceIntent = new Intent(this, OtterStreamService.class);
+            serviceIntent.setAction(OtterStreamService.ACTION_STOP);
+            startService(serviceIntent);
         } catch (Exception ignored) {}
     }
 

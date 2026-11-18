@@ -27,3 +27,17 @@
 - FEAT-025 | 2026-11-17 | Stable Release Packaging | Dual packages for Stable_Desktop_Client and Stable_android_app with root launchers and APK. Status: Tested
 - FEAT-026 | 2026-11-17 | Distribution & Store Policies | Split stable releases into playstore and non-playstore versions with Indian Law ToS and Privacy Policy. Status: Tested
 - FEAT-027 | 2026-11-17 | Mandatory Consent & Online Links | 1st-launch/update consent screen on PC and Android with online links (Privacy, Terms, License). Status: Tested
+- FEAT-028 | 2026-11-17 | Dual Virtual Background & Guidebook | Workload routing (PC GPU/CPU offload vs on-device), custom image/blur/chroma, and master Guidebook. Status: Tested
+- FEAT-029 | 2026-11-17 | Keep Screen On & Dim Mode | User-selectable toggle to keep screen on or allow auto-sleep, and screen dimming to preserve power. Status: Tested
+- FEAT-030 | 2026-11-17 | Android 16 Target & Play Compliance | Upgraded targetSdk to 36 (Android 16), removed restricted battery permission, and corrected Data Safety and legal citations. Status: Tested
+- FEAT-031 | 2026-11-17 | Sample Wallpapers & Wallpaper Sizing Spec | Curated 1920x1080 16:9 sample wallpaper suite and sizing guidance for Virtual Background. Status: Tested
+- FEAT-032 | 2026-11-17 | Live Camera Streaming Notification | Persistent ongoing notification indicating active camera streaming with status info and one-tap Stop button. Status: Tested
+- FEAT-033 | 2026-11-17 | Version Bump to 1.2.0.0 (versionCode 4) | Incremented Android versionCode to 4 and versionName to 1.2.0.0 across Play Store and stable packages. Status: Tested
+- FEAT-034 | 2026-11-18 | ADB-Free USB Tethering Mode | Connect over high-speed USB cable using standard Android USB Tethering without ADB or Developer Options. Status: Tested
+- FEAT-035 | 2026-11-18 | Self-Bootstrapping Linux & macOS Launchers | Automatic isolated .venv creation, dependency installation, and Tkinter diagnostics for Linux/macOS. Status: Tested
+- FEAT-036 | 2026-11-18 | Automated Cross-Platform Test Suite | Script (test_cross_platform.py) validating syntax, line endings, mock Linux, mock macOS, and tethering. Status: Tested
+- FEAT-037 | 2026-11-18 | Non-Play Store Android 5.0 (API 21) Parity | Lowered minSdk to 21 (Android 5.0 Lollipop) for F-Droid package, maintaining minSdk 24 on Play Store package. Status: Tested
+- FEAT-038 | 2026-11-18 | Mobile & Desktop Virtual Background Suite | Added Gallery image picker, solid green screen, bokeh/privacy blur, and preset wallpapers to Android app and Desktop client. Status: Tested
+- FEAT-039 | 2026-11-18 | High-Res Quad-Bayer Sensor Detection & 60 FPS Suite | Ultra Photo high-res remosaic & pixel-binning auto-detection (64MP/50MP), dynamic 60 FPS HAL range adaptation, and Foreground Service toggle. Status: Tested
+- FEAT-040 | 2026-11-18 | Mode-Aware Auto Detect IP & Adapter Filtering | Auto Detect IP button resolves IP based on active mode: Tethering interface/gateway, ADB loopback availability, or filtered Wi-Fi LAN IP. Status: Tested
+- FEAT-041 | 2026-11-19 | Zero-Terminal Silent Launchers Suite | Windowless launchers for all OSes: run_windows_silent.vbs, run_linux_silent.sh, otter.desktop, and run_macos_silent.command. Status: Tested

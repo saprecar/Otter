@@ -27,7 +27,7 @@
 | +---------------------------------------------------------+ |
 | [Cam Connected]  |  Lens: 0 (BACK)  |  [ H.264 ]            |
 +-------------------------------------------------------------+
-| ⚡ Quick Modes                           Choose a purpose   |
+| Quick Modes                              Choose a purpose   |
 | +-------------+ +-------------+ +-------------+ +---------+ |
 | | [Meetings]  | | [Online Cl] | | [Streaming] | |[Snapshot| |
 | |    Green    | |    Blue     | |   Purple    | | Orange  | |
@@ -37,14 +37,16 @@
 | |    Cyan     | |  Slate Blue | |   Emerald   | |  Pink   | |
 | +-------------+ +-------------+ +-------------+ +---------+ |
 +-------------------------------------------------------------+
-| ⚙ Camera Settings                            More Options ▾ |
+| Camera Settings                              More Options v |
 |  [ EV - ] [--------------o--------------] [ EV + ]   +0.0   |
 |  [ AF: Auto ] [----------o--------------]            Auto   |
-|  [ Flip: OFF ]  [ Rotate: 0° ]  [ Torch: OFF ]  [ Glow: OFF]|
+|  [ Flip: OFF ]  [ Rotate: 0 deg ]  [ Torch: OFF ]  [ Glow: OFF]|
 |  Pro: [ ISO: Auto ] [ Shutter: Auto ] [ WB: Auto ] [ FX: Col|
+|  Pro: [ Virtual BG: PC GPU Offload (Recommended)          ] |
 +-------------------------------------------------------------+
 | [ Start Stream ]  [ Pause ]  [ Stop ]  [ Switch Lens ]      |
-| [★ Ultra Photo (Full Res)]  [ Lock Mode: ON ]  [ Battery ]  |
+| [ Ultra Photo (Full Res) ]  [ Lock Mode: ON ]  [ Battery ]  |
+| [ Screen: Keep ON ]  [ Dim Display (Save Power)           ] |
 +-------------------------------------------------------------+
 | ● Otter: Ready                          Port: 8089 | v1.1.0 |
 +-------------------------------------------------------------+
@@ -60,9 +62,12 @@
   - `White Balance`: Auto, Daylight, Cloudy, Fluorescent, Tungsten.
   - `Color Effects`: Color, Black & White (Mono), Negative, Sepia.
 - **Dynamic 4K & High FPS Detection**: Auto-detects supported video resolutions (up to 4K `3840x2160`) and sensor FPS ranges (up to 60 FPS) directly from device hardware.
-- **★ Ultra Photo Capture**: Captures uncompressed still images at the camera sensor's maximum hardware resolution (e.g. 64MP / 48MP / 16MP) and saves directly to disk.
+- **Ultra Photo Capture**: Captures uncompressed still images at the camera sensor's maximum hardware resolution (e.g. 64MP / 48MP / 16MP) and saves directly to disk.
+- **Virtual Background & AI Offload**: Select between PC GPU/CPU Offload (preserves phone thermals, saves battery, smooth 60fps) and On-Device Mobile processing. Supports custom background images, light bokeh blur, heavy privacy blur, and chroma key (green screen). Recommended wallpaper size: 16:9 ratio (1920x1080 FHD / 1280x720 HD) in PNG, JPG, or WEBP (<15MB). Includes 4 built-in sample wallpapers in `wallpapers/`.
+- **Live Camera Active Notification**: Displays an ongoing, non-dismissible Android notification (`Otter Camera: LIVE`) while streaming is active, showing current port, resolution, and a one-tap `[Stop Stream]` action button.
+- **Keep Screen On Toggle & Display Dim**: User-configurable toggle between keeping the phone screen awake during streams (`FLAG_KEEP_SCREEN_ON`) or allowing auto-sleep to save battery. "Dim Display" mode minimizes screen brightness by 70% while streaming.
 - **Quick Modes (8 Purpose Presets)**: One-tap profiles for Meetings, Online Class, Streaming, Snapshot, Scan/OCR, Security, Fun Filter, and Pro Manual.
-- **Fullscreen Mode & Floating Overlay**: Tap `⛶` to expand the camera viewport to 100% full screen with a collapsible floating action menu (`⚡`).
+- **Fullscreen Mode & Floating Overlay**: Tap Fullscreen `[ ]` to expand the camera viewport to 100% full screen with a collapsible floating action menu.
 
 ### Multi-Screen & Responsive Device Support
 - **Smartphones (Portrait)**: Full-bleed viewfinder on top with scroll-protected action controls below.
@@ -74,59 +79,74 @@
 
 ## 2. Desktop Controller GUI (`otter_app.py`)
 
-### UI Layout
-```
-+---------------------------------------------------------------------------------+
-| Otter | Virtual Webcam & Remote Controller                       [DISCONNECTED] |
-+---------------------------------------------------------------------------------+
-| [ Controller ]     [ OBS & Discord Setup ]   [ Dependencies ]  [ About/License ]|
-+---------------------------------------------------------------------------------+
-| Connection & Multi-Camera Settings:                                             |
-| (o) USB (ADB Auto-Tunnel)  ( ) Wi-Fi  [Auto Detect IP]  [x] Virtual Camera      |
-| IP: [127.0.0.1  ]  Stream: [8089]  Ctrl: [8090]  [ Connect & Start ]  [ Stop ]  |
-|                                                                                 |
-| Quick Modes (One-Click Presets):                                                |
-| [Meetings] [Online Class] [Streaming] [Snapshot] [Scan] [Security] [Fun] [Pro]  |
-|                                                                                 |
-| Remote Camera Hardware & Format:                                                |
-| [Flip Lens] [Mirror: OFF] [Rotate: 0°] [Torch: Cycle] [Ultra Photo (Full Res)]  |
-| Resolution: [ 720p (1280x720) v ]   Target FPS: [ 30 FPS v ]                    |
-|                                                                                 |
-| Zoom Controls (+/- Buttons & Slider):                                           |
-| [ Zoom Out (-) ]  [===|============== 1.0x - 8.0x ===]  [ Zoom In (+) ]  [1.0x] |
-|                                                                                 |
-| Pro Camera Controls & Auto Sliders:                                             |
-| ISO:       [x] Auto ISO     [====|============= ISO 100-3200 ===]  [ Auto     ] |
-| Shutter:   [x] Auto Shutter [====|============= 1/2000s-1/15s ==]  [ Auto     ] |
-| White Bal: [x] Auto AWB     [====|============= Daylight/Cloud =]  [ Auto(AWB)] |
-| Color FX:  [x] Normal FX    [====|============= B&W/Neg/Sepia ==]  [ Normal   ] |
-| [AF: Auto] [Focus: Auto]    [ EV (-) ]  [EV: +0.0]  [ EV (+) ]     [Sync State] |
-|                                                                                 |
-| Event & Connection Log:                                                         |
-| [12:00:00] Otter Virtual Camera Controller initialized.                         |
-| [12:00:01] Connected to Otter stream via USB.                                   |
-+---------------------------------------------------------------------------------+
-| Otter Ready | MIT License | spacecar                                            |
-+---------------------------------------------------------------------------------+
+### Material Design 3 Control Panel Layout
+```text
++-------------------------------------------------------------------------------------------------------------------+
+| [Otter] Otter - Virtual Webcam & Remote Controller                                                 [Disconnected] |
++-------------------------------------------------------------------------------------------------------------------+
+| Connection                                                                                                        |
+| [USB Tethering]  [ADB USB Tunnel]  [Wi-Fi LAN IP]  | IP: [ 127.0.0.1  ] [Copy]  [Auto Detect IP]  [ Connect & Start ] |
++-------------------------------------------------------------------------------------------------------------------+
+| Quick Modes (One-Click Presets)                                                                                   |
+| [Meetings] [Online Class] [Streaming] [Snapshot] [Scan / OCR] [Security] [Fun Filter] [Pro Reset]                 |
++--------------------------------+---------------------------------------+------------------------------------------+
+| Camera                         | Image Controls                        | Lighting                                 |
+| +----------------------------+ | ISO:           [Auto v] [Switch: ON ] | Torch:               [Off] [Switch: OFF]  |
+| | ⌜                        ⌝ | | Shutter:       [Auto v] [Switch: ON ] | Front Glow:          [Off] [Switch: OFF]  |
+| |       CAMERA PREVIEW       | | White Balance: [Auto v] [Switch: ON ] | Screen Keep ON:       [On] [Switch: ON ]  |
+| |       (Live Viewfinder)    | | Color FX:    [Normal v] [Switch: OFF] | Brightness:   [==|==============]   75%    |
+| | ⌞                        ⌟ | |                                       | Color Temp:   [====|============] 5500K    |
+| +----------------------------+ | [AF: Auto]  [Focus]  [EV -]  [EV +]   +------------------------------------------+
+| [Front | Rear]  [Rotate]       | [Sync State]                          | More Controls                            |
+| Resolution: [ 720p (1280x720) v]---------------------------------------+ [OBS Setup]   [Dependencies] [OEM Fix]   |
+| Frame Rate: [ 30 FPS          v] Background                            | [Settings]    [Diagnostics]  [Uninstall] |
+| Zoom: [-] [===|==============] [+] | [Pass-Through] [Blur] [Green Screen]   +------------------------------------------+
+| [Ultra Photo]     [Mirror: OFF]| [Select Image] [Presets]              | Event Log                        [Clear] |
+|                                | Workload: (o) GPU  ( ) Mobile         | [12:00:00] Otter Controller ready.       |
+|                                |                                       | [12:00:01] USB Tunnel active on port 8089|
++--------------------------------+---------------------------------------+------------------------------------------+
 ```
 
 ### Launching the Desktop UI (One-Click Launchers)
 
+#### Standard Launchers (With Console Logs)
 - **Windows**: Double-click `run_windows.bat`
 - **Linux**: Run `./run_linux.sh` (or `bash run_linux.sh`)
 - **macOS**: Double-click `run_macos.command` in Finder (or `./run_macos.sh`)
 
+#### Zero-Terminal Silent Launchers (No Command Prompt or Terminal Window)
+- **Windows**: Double-click `run_windows_silent.vbs` (uses `pythonw.exe` without opening `cmd.exe`).
+- **Linux**: Run `./run_linux_silent.sh` or double-click `otter.desktop` (uses freedesktop `Terminal=false`).
+- **macOS**: Double-click `run_macos_silent.command` (detaches via AppleScript, closing Terminal.app immediately).
+
 Or launch directly via Python:
 ```bash
 python Dev/desktop/otter_app.py
+# Or launch without terminal on Windows:
+pythonw Dev/desktop/otter_app.py
 ```
 
 ---
 
-## 3. How to Connect: USB Cable (Recommended) vs. Wi-Fi (Step-by-Step)
+## 3. How to Connect: USB Tethering vs. ADB vs. Wi-Fi (Step-by-Step)
 
-### Method A: USB Cable Connection (Recommended for 0-Latency & Stable 1080p)
-Using a USB data cable provides instantaneous, hardware-speed frame transmission without Wi-Fi jitter, interference, or bandwidth drops.
+### Method A: USB Tethering Connection (Recommended - Zero ADB / No Developer Mode Required)
+USB Tethering uses Android's native hardware USB Ethernet driver (RNDIS / CDC-NCM) to create a direct high-speed wired connection between your phone and PC without requiring Developer Options, USB debugging, or ADB platform-tools:
+
+1. **Connect USB Cable**:
+   - Plug your phone into your PC using a standard USB data cable.
+2. **Turn ON USB Tethering**:
+   - On Android: Open **Settings** -> **Network & Internet** -> **Hotspot & Tethering** -> toggle ON **USB Tethering**.
+   - *Shortcut*: In the Otter mobile app, tap or long-press the network status label to open Tethering settings directly.
+3. **Start Mobile Stream**:
+   - Tap **Start Stream** in the Otter mobile app. The top status bar will display `USB Tether: 192.168.42.129`.
+4. **Connect on Desktop**:
+   - In the Otter desktop controller, select **USB Tethering (No ADB)**.
+   - Click **Connect & Start** (or **Auto Detect IP**).
+   - Your studio-grade wired stream is live instantly with 0-latency.
+
+### Method B: USB Cable via ADB (Alternative Wired Mode with Port Forwarding)
+For users who prefer standard ADB port forwarding over USB:
 
 1. **Enable Developer Options on Android**:
    - Open your phone's **Settings** -> **About Phone**.
@@ -136,7 +156,6 @@ Using a USB data cable provides instantaneous, hardware-speed frame transmission
    - Turn ON the toggle for **USB Debugging**.
 3. **Connect USB Cable**:
    - Plug your phone into your PC using a standard USB data cable.
-   - If prompted for USB configuration, select **File Transfer (MTP)** or default.
 4. **Authorize Computer**:
    - A dialog will appear on your phone screen: *"Allow USB debugging?"*.
    - Check the box **"Always allow from this computer"** and tap **OK / Allow**.
@@ -144,10 +163,10 @@ Using a USB data cable provides instantaneous, hardware-speed frame transmission
    - Open Otter on your phone and tap the green **Start** button.
 6. **Launch & Connect Desktop App**:
    - On PC, double-click `run_windows.bat` (or Linux `./run_linux.sh` / macOS `run_macos.command`).
-   - Select **USB (ADB Auto-Tunnel)** and click **Connect & Start**.
+   - Select **USB (ADB Tunnel)** and click **Connect & Start**.
    - The stream will initialize immediately and virtual camera feed is broadcast.
 
-### Method B: Wi-Fi Connection (Wireless Convenience)
+### Method C: Wi-Fi Connection (Wireless Convenience)
 Allows wireless streaming over your local network without any cables attached.
 
 1. **Connect to Same Network**:
@@ -290,4 +309,34 @@ Otter provides pro-grade camera optics controls synced bidirectionally between t
 ### Exposure Value Compensation (EV)
 - **Step Adjustment**: Adjust brightness balance in challenging back-lit situations via `CONTROL_AE_EXPOSURE_COMPENSATION`.
 - **Bidirectional Sync**: Real-time EV value (e.g., `-2.0`, `0.0`, `+2.0`) is updated across both phone and desktop interface simultaneously.
+
+---
+
+## 8. Virtual Background, Bokeh Blur, Chroma Green Screen & Wallpapers
+
+Otter features an advanced dual-engine Virtual Background system providing privacy and professional streaming backdrops across both the Android app and the Desktop Client:
+
+### Workload Routing: PC GPU/CPU Offload vs Mobile
+- **PC GPU/CPU Offload (Recommended)**: The phone streams unadulterated high-definition video at 60 FPS while your desktop or laptop GPU handles background segmentation and compositing. Your phone stays cool with minimal battery consumption.
+- **Mobile Device Processing**: Background processing is handled entirely on the mobile processor for standalone setups.
+
+### Background Modes & Effects
+1. **Pass-Through (Off)**: Raw, unaltered camera feed.
+2. **Light Bokeh Blur (Portrait)**: Elegant portrait depth-of-field blur keeping the subject sharp while softly defocusing the room.
+3. **Heavy Privacy Blur**: Maximum privacy blur obscuring confidential backgrounds, documents, and messy rooms.
+4. **Solid Green Screen (Chroma Key)**: Replaces background with pure Chroma Key Green `(RGB 0, 255, 0)` for seamless keying inside OBS Studio, Zoom, Discord, or vMix.
+5. **Custom Wallpaper Image**: Upload or select your own custom image from your phone gallery (`ACTION_GET_CONTENT`) or PC file browser (`.png`, `.jpg`, `.jpeg`, `.webp`).
+6. **Built-in Presets**: Quick one-click wallpapers included in `wallpapers/`:
+   - `Modern Office`: Contemporary executive open-office backdrop.
+   - `Studio Bokeh`: Warm studio light spheres and clean depth.
+   - `Minimalist Bookshelf`: Professional academic library look.
+   - `Cozy Coffee Shop`: Warm café ambiance.
+
+### Recommended Wallpaper Specifications
+- **Aspect Ratio**: `16:9` widescreen (matches standard camera video output).
+- **Resolutions**: `1920x1080` (1080p FHD) or `1280x720` (720p HD).
+- **Supported Formats**: PNG, JPG, JPEG, WEBP.
+- **Maximum File Size**: Under 15 MB.
+- **Automatic Scaling**: Custom wallpapers are automatically scaled, cropped, and centered to match your stream resolution without distortion.
+
 

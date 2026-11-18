@@ -8,6 +8,17 @@
 - REQ-006 | 2026-11-16 | Otter Desktop UI with OBS/Discord instructions, spacecar branding, and MIT license. Status: Tested
 - REQ-007 | 2026-11-16 | Background WakeLock/ForegroundService, OEM anti-kill guides, and desktop dependency wizard. Status: Tested
 - REQ-008 | 2026-11-17 | Auto/manual camera focus and exposure compensation controls synced bidirectionally in real-time between Android and Desktop. Status: Tested
-- REQ-009 | 2026-11-17 | Pro Manual Camera Controls (ISO, shutter speed, AWB, EV +/-, mono/B&W effect, zoom +/-) and image adjustments (brightness, contrast, warmth) synced with PC. Status: WIP
-- REQ-010 | 2026-11-17 | Dynamic Hardware Capability Detection (up to 4K resolutions, available FPS ranges, ultra-res full-sensor photo capture up to 64MP+). Status: WIP
+- REQ-009 | 2026-11-17 | Pro Manual Camera Controls (ISO, shutter speed, AWB, EV +/-, mono/B&W effect, zoom +/-) and image adjustments (brightness, contrast, warmth) synced with PC. Status: Tested
+- REQ-010 | 2026-11-17 | Dynamic Hardware Capability Detection (up to 4K resolutions, available FPS ranges, ultra-res full-sensor photo capture up to 64MP+). Status: Tested
 - REQ-011 | 2026-11-17 | Google Play Store Policy & Sideload separation with Indian Law ToS, zero telemetry, and Data Safety breakdown. Status: Tested
+- REQ-012 | 2026-11-17 | Dual Virtual Background engine (PC GPU/CPU offload vs on-device mobile) and master GitHub Guidebook. Status: Tested
+- REQ-013 | 2026-11-17 | Keep Screen On & Display Power Controls | User-selectable screen wake lock (FLAG_KEEP_SCREEN_ON) and display dimming mode to save battery while streaming. Status: Tested
+- REQ-014 | 2026-11-17 | Android 16 (API 36) & Play Store Audit | Target SDK 36, truth in Data Safety (in-transit: No), Section 66E privacy citation, and restricted battery permission removal. Status: Tested
+- REQ-015 | 2026-11-17 | Google Play Automatic Protection (minSdk 24) | Raise minSdkVersion to 24 (Android 7.0 Nougat) for Play Store Automatic Protection compliance. Status: Tested
+- REQ-016 | 2026-11-17 | Android Version Bump (versionCode 4, versionName 1.2.0.0) | Increment versionCode and versionName for Play Console submission compliance. Status: Tested
+- REQ-017 | 2026-11-18 | Cross-Platform Desktop Packaging & ADB-Free USB Tethering | Automated Linux/macOS bootstrapping venv, Windows standalone bundle, and USB Tethering without ADB. Status: Tested
+- REQ-018 | 2026-11-18 | Android 5.0 (API 21) Support for F-Droid / Non-Play Store Version | Set minSdkVersion 21 on non-Play Store version while keeping Play Store version at minSdk 24. Status: Tested
+- REQ-019 | 2026-11-18 | Complete Virtual Background & Green Screen Selection Suite | Custom gallery wallpaper picker, solid chroma green screen, bokeh/privacy blur, and preset wallpapers across Android and PC. Status: Tested
+- REQ-020 | 2026-11-18 | High-Res Quad-Bayer Detection, 60 FPS Range Negotiation & Foreground Toggle | Automatic full-sensor/pixel-binning resolution detection (64MP/50MP), HAL 60 FPS range adaptation, and user-controlled Foreground Service. Status: Tested
+- REQ-021 | 2026-11-18 | Connection-Mode Aware Auto Detect IP Suite | Mode-aware IP detection for USB Tethering, USB ADB Tunnel (127.0.0.1 port check), and Wi-Fi LAN with multi-adapter and virtual adapter filtering. Status: Tested
+- REQ-022 | 2026-11-19 | Cross-Platform Zero-Terminal Silent Launchers | Silent windowless execution across Windows (run_windows_silent.vbs/pythonw), Linux (run_linux_silent.sh / otter.desktop Terminal=false), and macOS (run_macos_silent.command / AppleScript detachment). Status: Tested

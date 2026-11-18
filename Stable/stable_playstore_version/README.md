@@ -1,4 +1,4 @@
-# Otter - Google Play Store Release Package (v1.1.0.0)
+# Otter - Google Play Store Release Package (v1.2.0.0)
 
 Production Android package structured and compliant with the latest Google Play Store policies and Indian IT laws.
 
@@ -10,7 +10,7 @@ Production Android package structured and compliant with the latest Google Play 
 | :--- | :--- | :--- |
 | **Package Format** | Android App Bundle (`.aab`) | Standalone APKs (Signed & Unsigned) |
 | **Signing Mechanism** | Google Play App Signing (Upload Key / Keystore) | Self-signed or developer signed |
-| **Target SDK** | Target SDK 34 (Android 14) Required | Target SDK 34 (Compatible with API 21+) |
+| **Target SDK** | Target SDK 36 (Android 16, Baklava) | Target SDK 36 (Android 16, Baklava) |
 | **Privacy Compliance** | In-App Privacy Policy Link + Public URL Required | Embedded Offline Policy |
 | **Data Safety Section** | Mandatory Play Console Data Safety Submission | Not required |
 | **Foreground Service Declaration** | Explicit `FOREGROUND_SERVICE_CAMERA` Justification | Local AndroidManifest declaration |

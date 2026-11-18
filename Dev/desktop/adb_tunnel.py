@@ -56,35 +56,73 @@ class ADBTunnel:
         except Exception:
             return []
 
-    def setup_forward(self, serial=None) -> bool:
-        if not self.is_available():
-            return False
-        cmd_prefix = [self.adb_bin]
-        if serial:
-            cmd_prefix.extend(["-s", serial])
+    def usb_serial(self):
+        """Return first phone in 'device' state (USB debugging authorised), else None."""
+        devices = self.list_devices()
+        return devices[0] if devices else None
 
-        try:
-            # Forward video stream
-            subprocess.run(
-                cmd_prefix + ["forward", f"tcp:{self.stream_port}", f"tcp:{self.stream_port}"],
-                check=True,
-                capture_output=True
-            )
-            # Forward control commands
-            subprocess.run(
-                cmd_prefix + ["forward", f"tcp:{self.control_port}", f"tcp:{self.control_port}"],
-                check=True,
-                capture_output=True
-            )
-            return True
-        except subprocess.CalledProcessError:
-            return False
+    def _adb_prefix(self, serial=None):
+        return [self.adb_bin] + (["-s", serial] if serial else [])
 
-    def remove_forward(self) -> None:
+    def clear_forward(self, serial=None):
+        """Remove old forwards first. Stale forwards cause 'port in use' errors."""
         if not self.is_available():
             return
+        for port in (self.stream_port, self.control_port):
+            subprocess.run(
+                self._adb_prefix(serial) + ["forward", "--remove", f"tcp:{port}"],
+                capture_output=True,
+                text=True
+            )
+
+    def get_forward_list(self) -> list:
+        """List active ADB forward rules."""
+        if not self.is_available():
+            return []
         try:
-            subprocess.run([self.adb_bin, "forward", "--remove", f"tcp:{self.stream_port}"], capture_output=True)
-            subprocess.run([self.adb_bin, "forward", "--remove", f"tcp:{self.control_port}"], capture_output=True)
+            r = subprocess.run([self.adb_bin, "forward", "--list"], capture_output=True, text=True, timeout=5)
+            return r.stdout.strip().splitlines()
         except Exception:
-            pass
+            return []
+
+    def resolve_forward_ports(self, serial=None):
+        """Resolve available local ports on 127.0.0.1. If occupied by non-ADB process, allocate dynamic ports."""
+        import network_discovery
+        fwd_list = "\n".join(self.get_forward_list())
+        
+        # Check stream port
+        sp = self.stream_port
+        if f"tcp:{sp}" not in fwd_list and network_discovery.is_port_in_use(sp, "127.0.0.1"):
+            sp = network_discovery.find_available_port(sp + 1, "127.0.0.1")
+
+        # Check control port
+        cp = self.control_port
+        if f"tcp:{cp}" not in fwd_list and network_discovery.is_port_in_use(cp, "127.0.0.1"):
+            cp = network_discovery.find_available_port(max(cp + 1, sp + 1), "127.0.0.1", exclude=[sp])
+
+        return sp, cp
+
+    def setup_forward(self, serial=None, local_stream_port: int = None, local_control_port: int = None) -> bool:
+        if not self.is_available():
+            return False
+        lsp = local_stream_port or self.stream_port
+        lcp = local_control_port or self.control_port
+        try:
+            self.clear_forward(serial)
+            for local_p, remote_p in ((lsp, self.stream_port), (lcp, self.control_port)):
+                r = subprocess.run(
+                    self._adb_prefix(serial) + ["forward", f"tcp:{local_p}", f"tcp:{remote_p}"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                if r.returncode != 0:
+                    print(f"ADB forward failed on port {local_p}->{remote_p}: {(r.stderr or r.stdout).strip()}")
+                    return False
+            return True
+        except Exception as e:
+            print(f"ADB forward error: {e}")
+            return False
+
+    def remove_forward(self, serial=None) -> None:
+        self.clear_forward(serial)

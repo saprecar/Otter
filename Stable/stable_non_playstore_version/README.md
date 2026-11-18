@@ -28,6 +28,13 @@ apksigner sign --ks your-keystore.jks --ks-key-alias your-alias --out Otter-cust
 
 ---
 
+## 3. F-Droid Distribution & Metadata
+Otter is open-source (MIT) and ready for F-Droid and IzzyOnDroid distribution:
+- **F-Droid Metadata Recipe**: [org.understory.cambridge.yml](org.understory.cambridge.yml)
+- **F-Droid Submission Guide**: [FDROID_SUBMISSION_GUIDE.md](FDROID_SUBMISSION_GUIDE.md)
+
+---
+
 ## 3. Building From Source
 ```bash
 # Windows

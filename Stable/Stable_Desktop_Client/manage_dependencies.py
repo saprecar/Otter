@@ -29,7 +29,7 @@ def check_dependencies():
 
 def install_dependencies(auto_confirm=False, log_callback=None):
     if log_callback:
-        log_callback("Installing required Python packages (opencv-python, numpy)...")
+        log_callback("Installing required Python packages (opencv-python, numpy, imageio-ffmpeg)...")
 
     cmd = [sys.executable, "-m", "pip", "install"] + PACKAGES
     if log_callback:
@@ -37,13 +37,20 @@ def install_dependencies(auto_confirm=False, log_callback=None):
     print(f"\nExecuting: {' '.join(cmd)}")
     res = subprocess.run(cmd)
 
+    # Fallback for Linux PEP 668 externally-managed-environment or permission restrictions
+    if res.returncode != 0:
+        if log_callback:
+            log_callback("Retrying installation with --user and --break-system-packages...")
+        cmd_fallback = [sys.executable, "-m", "pip", "install", "--user", "--break-system-packages"] + PACKAGES
+        res = subprocess.run(cmd_fallback)
+
     if res.returncode == 0:
-        msg = "All required Python dependencies (opencv-python, numpy) are installed and ready!"
+        msg = "All required Python dependencies (opencv-python, numpy, imageio-ffmpeg) are installed and ready!"
         if log_callback:
             log_callback(msg)
         return True, msg
     else:
-        err = "Failed to install Python packages. Please verify your internet connection or install manually."
+        err = "Failed to install Python packages. Please verify your internet connection or install manually via pip install -r requirements.txt."
         if log_callback:
             log_callback(err)
         return False, err

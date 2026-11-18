@@ -84,17 +84,35 @@ class CamBridgeControl:
     def set_quick_mode(self, mode: str):
         return self.send_command({"action": "set_quick_mode", "mode": mode})
 
+    def set_background_mode(self, mode: str, workload: str = "pc"):
+        return self.send_command({"action": "set_background_mode", "mode": mode, "workload": workload})
+
+    def toggle_keep_screen_on(self):
+        return self.send_command({"action": "toggle_keep_screen_on"})
+
+    def set_keep_screen_on(self, enabled: bool):
+        return self.send_command({"action": "set_keep_screen_on", "enabled": enabled})
+
     def capture_still(self):
         return self.send_command({"action": "capture_still"})
 
     def get_capabilities(self):
         return self.send_command({"action": "get_capabilities"})
 
+    def start_stream(self):
+        return self.send_command({"action": "start_stream"})
+
+    def stop_stream(self):
+        return self.send_command({"action": "stop_stream"})
+
     def pause(self):
         return self.send_command({"action": "pause"})
 
     def resume(self):
         return self.send_command({"action": "resume"})
+
+    def set_connection_mode(self, mode: str):
+        return self.send_command({"action": "set_connection_mode", "mode": mode})
 
     def get_status(self):
         return self.send_command({"action": "get_status"})

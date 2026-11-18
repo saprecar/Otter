@@ -68,8 +68,9 @@ TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW:
 ---
 
 ## 6. Prohibited Surveillance & Misuse
-In accordance with Section 66E and Section 67 of the Indian Information Technology Act, 2000, you are strictly prohibited from using Otter:
-- To conduct clandestine, unauthorized surveillance, voyeurism, or recording of any person without their explicit knowledge and affirmative consent.
+In accordance with Section 66E (Violation of Privacy) and Section 67 (Transmitting Obscene Material) of the Indian Information Technology Act, 2000, you are strictly prohibited from using Otter:
+- To conduct clandestine, unauthorized surveillance, voyeurism, or capturing/transmitting visual images of any person without their explicit knowledge and affirmative consent (Section 66E).
+- To transmit, broadcast, or display obscene, offensive, or unlawful content (Section 67).
 - In life-support, emergency response, hazardous, or mission-critical environments where software failure could lead to personal injury or property damage.
 
 ---

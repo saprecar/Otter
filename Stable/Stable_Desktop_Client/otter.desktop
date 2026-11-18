@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=Otter Virtual Camera
+GenericName=Virtual Webcam
+Comment=Virtual Webcam & Remote Controller
+Exec=bash -c "cd $(dirname %k) && ./run_linux_silent.sh"
+Icon=camera-video
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;Network;
+StartupNotify=true

@@ -3,6 +3,7 @@ import os
 import socket
 import struct
 import subprocess
+import shutil
 import sys
 import threading
 import time
@@ -86,13 +87,57 @@ class H264DecoderPipe:
         self.reader_thread = None
         self._init_ffmpeg()
 
-    def _init_ffmpeg(self):
-        ffmpeg_exe = "ffmpeg"
+    def _find_ffmpeg(self) -> str:
+        # 1. Try imageio_ffmpeg in current python environment
         try:
             import imageio_ffmpeg
-            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+            exe = imageio_ffmpeg.get_ffmpeg_exe()
+            if exe and os.path.isfile(exe):
+                return exe
         except Exception:
             pass
+
+        # 2. Check local/parent .venv site-packages for bundled imageio_ffmpeg binary
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        candidate_dirs = [
+            os.path.join(script_dir, ".venv"),
+            os.path.join(script_dir, "..", "..", ".venv"),
+            os.path.join(script_dir, "venv"),
+            os.path.join(script_dir, "..", "..", "venv"),
+            os.path.dirname(sys.executable)
+        ]
+        for cdir in candidate_dirs:
+            if not os.path.isdir(cdir):
+                continue
+            for root, _, files in os.walk(cdir):
+                if "imageio_ffmpeg" in root and "binaries" in root:
+                    for f in files:
+                        if f.startswith("ffmpeg") and (f.endswith(".exe") or not f.endswith(".py")):
+                            full_path = os.path.join(root, f)
+                            if os.path.isfile(full_path):
+                                return full_path
+
+        # 3. Check system PATH
+        which_ffmpeg = shutil.which("ffmpeg")
+        if which_ffmpeg:
+            return which_ffmpeg
+
+        # 4. Common Windows paths
+        win_candidates = [
+            r"C:\ffmpeg\bin\ffmpeg.exe",
+            r"C:\Program Files\obs-studio\bin\64bit\ffmpeg.exe",
+            r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
+            r"C:\ProgramData\chocolatey\bin\ffmpeg.exe",
+            os.path.expanduser(r"~\scoop\apps\ffmpeg\current\bin\ffmpeg.exe")
+        ]
+        for p in win_candidates:
+            if os.path.isfile(p):
+                return p
+
+        return "ffmpeg"
+
+    def _init_ffmpeg(self):
+        ffmpeg_exe = self._find_ffmpeg()
 
         cmd = [
             ffmpeg_exe,
@@ -116,7 +161,7 @@ class H264DecoderPipe:
             self.reader_thread = threading.Thread(target=self._reader_loop, daemon=True)
             self.reader_thread.start()
         except Exception as e:
-            print(f"H.264 FFmpeg decoder init notice: {e}")
+            print(f"H.264 FFmpeg decoder init notice: {e} (binary attempted: {ffmpeg_exe})")
             self.proc = None
 
     def _read_exact(self, n):
@@ -173,6 +218,144 @@ class H264DecoderPipe:
                 pass
             self.proc = None
 
+# [AI-BLOCK: Virtual Background Replacement & Workload Offload Processor]
+class VirtualBackgroundProcessor:
+    """
+    Real-time virtual background compositing and AI offload engine.
+    Supports:
+      - Workload routing: PC GPU/CPU offload vs on-device mobile processing.
+      - Modes: 'off', 'blur_light', 'blur_heavy', 'custom_image', 'chroma_green'.
+      - Fast image caching and dynamic resolution scaling.
+      - Dual pipeline: High-speed OpenCV color/vignette keying + optional MediaPipe AI segmentation.
+    """
+    def __init__(self):
+        self.mode = "off"
+        self.workload = "pc"
+        self.custom_image_path = None
+        self.cached_bg_image = None
+        self.cached_bg_res = (0, 0)
+        self.lock = threading.Lock()
+
+        self.mp_segmentation = None
+        try:
+            import mediapipe as mp
+            self.mp_segmentation = mp.solutions.selfie_segmentation.SelfieSegmentation(model_selection=1)
+        except Exception:
+            self.mp_segmentation = None
+
+    def set_mode(self, mode: str):
+        with self.lock:
+            self.mode = str(mode).strip().lower()
+            print(f"Virtual Background mode set to: {self.mode}")
+
+    def set_workload(self, workload: str):
+        with self.lock:
+            self.workload = str(workload).strip().lower()
+            print(f"Virtual Background workload routed to: {self.workload}")
+
+    def set_custom_image(self, path: str):
+        with self.lock:
+            self.custom_image_path = path
+            self.cached_bg_image = None
+            self.cached_bg_res = (0, 0)
+            print(f"Virtual Background custom image set: {path}")
+
+    def _get_background_image(self, width: int, height: int) -> np.ndarray:
+        if self.custom_image_path and os.path.isfile(self.custom_image_path):
+            if self.cached_bg_image is not None and self.cached_bg_res == (width, height):
+                return self.cached_bg_image
+            try:
+                img = cv2.imread(self.custom_image_path)
+                if img is not None:
+                    scaled = cv2.resize(img, (width, height), interpolation=cv2.INTER_LINEAR)
+                    self.cached_bg_image = scaled
+                    self.cached_bg_res = (width, height)
+                    return scaled
+            except Exception:
+                pass
+        fallback = np.full((height, width, 3), (35, 25, 20), dtype=np.uint8)
+        return fallback
+
+    def _create_portrait_mask(self, frame: np.ndarray, w: int, h: int) -> np.ndarray:
+        if self.mp_segmentation is not None:
+            try:
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                res = self.mp_segmentation.process(rgb)
+                if res.segmentation_mask is not None:
+                    mask = res.segmentation_mask
+                    mask = cv2.GaussianBlur(mask, (7, 7), 0)
+                    return np.clip(mask, 0.0, 1.0)
+            except Exception:
+                pass
+
+        cx, cy = w // 2, int(h * 0.55)
+        rx, ry = max(1, int(w * 0.38)), max(1, int(h * 0.48))
+        y, x = np.ogrid[:h, :w]
+        dist_sq = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2
+        mask = np.clip(1.0 - (dist_sq - 0.45) / 0.75, 0.0, 1.0)
+        mask = cv2.GaussianBlur(mask.astype(np.float32), (31, 31), 0)
+        return mask
+
+    def process(self, frame: np.ndarray) -> np.ndarray:
+        if frame is None or not CV2_AVAILABLE or not NUMPY_AVAILABLE:
+            return frame
+
+        with self.lock:
+            mode = self.mode
+            workload = self.workload
+
+        if mode in ("off", "none", "") or workload == "mobile":
+            return frame
+
+        h, w = frame.shape[:2]
+
+        if mode == "blur_light":
+            blurred = cv2.GaussianBlur(frame, (25, 25), 0)
+            mask = self._create_portrait_mask(frame, w, h)
+            mask_3c = cv2.merge([mask, mask, mask])
+            out = (frame.astype(np.float32) * mask_3c + blurred.astype(np.float32) * (1.0 - mask_3c)).astype(np.uint8)
+            return out
+
+        elif mode == "blur_heavy":
+            blurred = cv2.GaussianBlur(frame, (55, 55), 0)
+            mask = self._create_portrait_mask(frame, w, h)
+            mask_3c = cv2.merge([mask, mask, mask])
+            out = (frame.astype(np.float32) * mask_3c + blurred.astype(np.float32) * (1.0 - mask_3c)).astype(np.uint8)
+            return out
+
+        elif mode in ("green_screen", "solid_green", "chroma_key"):
+            mask = self._create_portrait_mask(frame, w, h)
+            mask_3c = cv2.merge([mask, mask, mask])
+            green_bg = np.zeros((h, w, 3), dtype=np.uint8)
+            green_bg[:, :] = (0, 255, 0) # Pure Chroma Green in BGR (0, 255, 0)
+            out = (frame.astype(np.float32) * mask_3c + green_bg.astype(np.float32) * (1.0 - mask_3c)).astype(np.uint8)
+            return out
+
+        elif mode == "chroma_green":
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            lower_green = np.array([35, 45, 45], dtype=np.uint8)
+            upper_green = np.array([85, 255, 255], dtype=np.uint8)
+            green_mask = cv2.inRange(hsv, lower_green, upper_green)
+
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            green_mask = cv2.morphologyEx(green_mask, cv2.MORPH_CLOSE, kernel)
+            green_mask = cv2.morphologyEx(green_mask, cv2.MORPH_OPEN, kernel)
+            green_mask = cv2.GaussianBlur(green_mask, (7, 7), 0)
+            alpha_bg = (green_mask.astype(np.float32) / 255.0)[:, :, np.newaxis]
+
+            bg = self._get_background_image(w, h)
+            out = (frame.astype(np.float32) * (1.0 - alpha_bg) + bg.astype(np.float32) * alpha_bg).astype(np.uint8)
+            return out
+
+        elif mode == "custom_image":
+            mask = self._create_portrait_mask(frame, w, h)
+            mask_3c = cv2.merge([mask, mask, mask])
+            bg = self._get_background_image(w, h)
+            out = (frame.astype(np.float32) * mask_3c + bg.astype(np.float32) * (1.0 - mask_3c)).astype(np.uint8)
+            return out
+
+        return frame
+
 # [AI-BLOCK: Main CamBridge Receiver and Virtual Camera Feed]
 class CamBridgeReceiver:
     def __init__(self, host="127.0.0.1", stream_port=8089, control_port=8090, width=1280, height=720, fps=30, camera_name="Otter Camera 1", window_title=None, rotation=0):
@@ -187,10 +370,46 @@ class CamBridgeReceiver:
         self.running = False
         self.controller = CamBridgeControl(host=self.host, port=self.control_port)
         self.rotation_angle = rotation
+        self.bg_processor = VirtualBackgroundProcessor()
+        self.reforward_cb = None   # set by caller: re-runs 'adb forward' before each retry
+        self.on_frame_cb = None    # optional callback for GUI live preview thumbnail
 
     def set_rotation(self, angle: int):
         self.rotation_angle = ((angle % 360) + 360) % 360
         print(f"Receiver video rotation set to {self.rotation_angle}°.")
+
+    def set_bg_mode(self, mode: str):
+        self.bg_processor.set_mode(mode)
+
+    def set_bg_workload(self, workload: str):
+        self.bg_processor.set_workload(workload)
+
+    def set_bg_image(self, path: str):
+        self.bg_processor.set_custom_image(path)
+
+    def _connect_with_retry(self, host, port, max_wait=10.0):
+        """Retry until phone stream is up. Re-run ADB forward each try. Gives a clear error."""
+        deadline = time.time() + max_wait
+        while self.running:
+            if self.reforward_cb:
+                try:
+                    self.reforward_cb()
+                except Exception as e:
+                    print(f"Re-forward failed: {e}")
+            try:
+                s = socket.create_connection((host, port), timeout=3)
+                s.settimeout(2.5)
+                print(f"Connected to {host}:{port}")
+                return s
+            except OSError as e:
+                print(f"Waiting for phone stream on {host}:{port} ({e.__class__.__name__}).")
+                if time.time() > deadline:
+                    print("TIMEOUT: Camera stream port not reachable. Check: 1) Start pressed on phone  2) USB debugging / Tethering ON "
+                          "3) Cable connected  4) 'adb devices' shows phone if USB mode  "
+                          "5) if Wi-Fi mode, phone IP is right.")
+                    return None
+                time.sleep(1.5)
+        return None
 
     def start_receiver(self, enable_virtualcam=True, show_preview=False):
         if not CV2_AVAILABLE or not NUMPY_AVAILABLE:
@@ -200,23 +419,10 @@ class CamBridgeReceiver:
         self.running = True
         print(f"CamBridge connecting to {self.host}:{self.stream_port}...")
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock = sock
-        sock.settimeout(5.0)
-
-        connected = False
-        while self.running and not connected:
-            try:
-                sock.connect((self.host, self.stream_port))
-                connected = True
-                print("Connected to CamBridge video stream.")
-            except Exception:
-                time.sleep(1.0)
-
-        if not connected:
+        sock = self._connect_with_retry(self.host, self.stream_port)
+        if not sock:
             return
-
-        sock.settimeout(None)
+        self.sock = sock
 
         # Virtual camera setup or OpenCV preview fallback
         vcam = None
@@ -293,6 +499,13 @@ class CamBridgeReceiver:
             elif rot == 270:
                 frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
+            # Pass clean rotated camera frame to UI viewfinder preview before pillarboxing
+            if self.on_frame_cb:
+                try:
+                    self.on_frame_cb(frame)
+                except Exception:
+                    pass
+
             fh, fw = frame.shape[:2]
             if fw != self.width or fh != self.height:
                 if rot in (90, 270):
@@ -307,6 +520,9 @@ class CamBridgeReceiver:
                     frame = canvas
                 else:
                     frame = cv2.resize(frame, (self.width, self.height))
+
+            # Apply Virtual Background replacement & AI offload engine
+            frame = self.bg_processor.process(frame)
 
             if uc_bridge:
                 uc_bridge.send_frame(frame)
@@ -329,15 +545,34 @@ class CamBridgeReceiver:
 
         # Demux packet stream (Length prefix + NAL payload)
         try:
+            consecutive_timeouts = 0
             while self.running:
-                raw_len = self._recv_exact(sock, 4)
-                if not raw_len:
+                try:
+                    raw_len = self._recv_exact(sock, 4)
+                except socket.timeout:
+                    consecutive_timeouts += 1
+                    if consecutive_timeouts >= 2:
+                        print("Phone video stream timeout: Device disconnected.")
+                        break
+                    continue
+                except (ConnectionResetError, BrokenPipeError, OSError) as e:
+                    print(f"Phone video connection lost: {e}")
                     break
+
+                if not raw_len:
+                    print("Phone video connection closed.")
+                    break
+                consecutive_timeouts = 0
+
                 (packet_len,) = struct.unpack("!I", raw_len)
                 if packet_len <= 0 or packet_len > 10_000_000:
                     continue
 
-                packet_data = self._recv_exact(sock, packet_len)
+                try:
+                    packet_data = self._recv_exact(sock, packet_len)
+                except (socket.timeout, ConnectionResetError, BrokenPipeError, OSError):
+                    print("Phone video connection lost mid-packet.")
+                    break
                 if not packet_data:
                     break
 
@@ -405,13 +640,19 @@ class CamBridgeReceiver:
                 if not packet:
                     return None
                 buffer.extend(packet)
+            except socket.timeout:
+                if len(buffer) == 0:
+                    raise
+                continue
+            except (ConnectionResetError, BrokenPipeError, OSError):
+                return None
             except Exception:
                 return None
         return bytes(buffer)
 
 def main():
     parser = argparse.ArgumentParser(description="CamBridge Desktop Virtual Camera & Remote Controller")
-    parser.add_argument("--mode", choices=["usb", "wifi"], default="usb", help="Connection mode: usb (via ADB tunnel) or wifi")
+    parser.add_argument("--mode", choices=["auto", "usb", "wifi"], default="auto", help="Connection mode: auto (USB first, then Wi-Fi), usb (via ADB tunnel) or wifi")
     parser.add_argument("--ip", default="127.0.0.1", help="Target IP for WiFi mode (default: 127.0.0.1 for USB/ADB)")
     parser.add_argument("--stream-port", type=int, default=8089, help="Video stream port")
     parser.add_argument("--control-port", type=int, default=8090, help="Control RPC port")
@@ -422,18 +663,29 @@ def main():
 
     tunnel = None
     target_ip = args.ip
+    reforward_cb = None
 
-    if args.mode == "usb":
+    if args.mode in ("auto", "usb"):
         tunnel = ADBTunnel(stream_port=args.stream_port, control_port=args.control_port)
-        if tunnel.is_available():
-            devices = tunnel.list_devices()
-            if devices:
-                print(f"Detected ADB device: {devices[0]}. Configuring non-root tunnel...")
-                tunnel.setup_forward(devices[0])
-            else:
-                print("No USB device found with 'adb devices'. Ensure USB debugging is ON.")
-        else:
-            print("Notice: 'adb' executable not found in PATH. If using WiFi or external tunnel, specify --mode wifi --ip <phone-ip>.")
+        serial = tunnel.usb_serial() if tunnel.is_available() else None
+        if serial:
+            print(f"Detected ADB device: {serial}. Configuring non-root tunnel...")
+            if tunnel.setup_forward(serial):
+                target_ip = "127.0.0.1"
+                reforward_cb = lambda: tunnel.setup_forward(serial)
+            elif args.mode == "auto":
+                print("ADB forward failed. Falling back to Wi-Fi target IP...")
+                target_ip = args.ip
+        elif args.mode == "usb":
+            print("No USB device found with 'adb devices'. Ensure USB debugging is ON.")
+            target_ip = "127.0.0.1"
+            if tunnel.is_available():
+                reforward_cb = lambda: tunnel.setup_forward()
+        else: # auto mode without USB device
+            print(f"No USB device detected. Using Wi-Fi target IP: {args.ip}...")
+            target_ip = args.ip
+    else: # wifi mode
+        target_ip = args.ip
 
     receiver = CamBridgeReceiver(
         host=target_ip,
@@ -441,6 +693,8 @@ def main():
         control_port=args.control_port,
         rotation=args.rotate
     )
+    if reforward_cb:
+        receiver.reforward_cb = reforward_cb
 
     try:
         receiver.start_receiver(enable_virtualcam=not args.no_vcam)

@@ -1,16 +1,51 @@
-# Otter - Virtual Webcam & Remote Control Suite
+<p align="center">
+  <img src="playstore_icon_512x512.png" alt="Otter Logo" width="120" height="120">
+</p>
 
-**Otter** is a lightweight, low-latency, 100% open-source virtual webcam suite that turns your Android device into a high-definition webcam for your PC (Windows, macOS, and Linux). Designed for content creators, remote workers, streamers, and privacy-conscious users.
+<h1 align="center">Otter - Virtual Webcam & Remote Control Suite</h1>
 
-- **Developer**: spacecar
-- **Official GitHub Repository**: [https://github.com/saprecar/Otter](https://github.com/saprecar/Otter)
-- **License**: MIT License (Permissive & Free to Use)
+<p align="center">
+  <img src="playstore_feature_graphic_1024x500.png" alt="Otter Feature Graphic" width="100%">
+</p>
+
+<p align="center">
+  <b>Turn your Android phone into a studio-grade PC webcam over USB or Wi-Fi.</b><br>
+  1080p 60 FPS | Zero-Latency ADB Tunnel | USB Tethering | Pro Optics | AI Virtual Background | 100% Private P2P
+</p>
+
+<p align="center">
+  <a href="https://github.com/saprecar/Otter">Official GitHub</a> |
+  <a href="GUIDEBOOK.md">Master Guidebook</a> |
+  <a href="Policies%20And%20Agreement/POLICIES_AND_AGREEMENT.md">Policies & Agreement</a> |
+  <a href="STORE_LISTING.md">Store Listing</a>
+</p>
+
+---
+
+## Visual Overview & Application Interface
+
+| Desktop Virtual Camera Controller | Android Mobile Camera Client |
+| :---: | :---: |
+| <img src="desktop_ui_screenshot.jpg" alt="Otter Desktop Controller UI" width="100%"> | <img src="android_ui_screenshot.jpg" alt="Otter Android App UI" width="70%"> |
+| **Complete PC Virtual Webcam Console**<br>Connection Modes, Pro Optics, AI BG, Lighting & Live Logs | **Streamlined Mobile Viewfinder**<br>Camera2 Hardware Pipeline, Quick Modes, Manual Controls |
+
+### Tablet Console & Feature Showcase
+
+| 1080p 60 FPS Streaming | Pro Manual Optics & Camera2 Controls |
+| :---: | :---: |
+| <img src="playstore_tablet_10inch_screenshot_1.png" alt="1080p 60 FPS Streaming" width="100%"> | <img src="playstore_tablet_10inch_screenshot_2.png" alt="Pro Manual Optics" width="100%"> |
+| **Dual Virtual Background (PC GPU Offload)** | **8 One-Touch Purpose Presets** |
+| <img src="playstore_tablet_10inch_screenshot_3.png" alt="Dual Virtual Background" width="100%"> | <img src="playstore_tablet_10inch_screenshot_4.png" alt="8 Presets" width="100%"> |
+| **Smart Power & Display Dimming** | **100% Private Zero-Cloud Architecture** |
+| <img src="playstore_tablet_10inch_screenshot_5.png" alt="Smart Power" width="100%"> | <img src="playstore_tablet_10inch_screenshot_6.png" alt="100% Private Zero-Cloud" width="100%"> |
+| **Multi-Lens Switching & 4K Ultra Photo** | **Universal Compatibility (OBS, Zoom, Teams)** |
+| <img src="playstore_tablet_10inch_screenshot_7.png" alt="Multi-Lens & 4K Photo" width="100%"> | <img src="playstore_tablet_10inch_screenshot_8.png" alt="Universal Compatibility" width="100%"> |
 
 ---
 
 ## What Does Otter Do?
 
-Otter captures high-definition video directly from your Android phone's Camera2 hardware pipeline, encodes it with low-latency hardware H.264 (`MediaCodec`), and streams it to your PC over a USB cable (zero-latency ADB tunnel) or Wi-Fi local network.
+**Otter** captures high-definition video directly from your Android phone's Camera2 hardware pipeline, encodes it with low-latency hardware H.264 (`MediaCodec`), and streams it to your PC over a USB cable (zero-latency ADB tunnel or USB Tethering) or local Wi-Fi.
 
 On your computer, the Otter Desktop receiver broadcasts the stream into an OS-level virtual camera that functions seamlessly with:
 - **OBS Studio & Streamlabs**
@@ -18,97 +53,198 @@ On your computer, the Otter Desktop receiver broadcasts the stream into an OS-le
 - **Google Meet, Zoom & Microsoft Teams**
 - **Web Browsers (Brave, Chrome, Firefox, Edge)**
 
+> **ROOT NOT REQUIRED**: Otter does **NOT** require root access on your phone. It runs completely on standard, unrooted stock Android operating systems.
+
+---
+
+## Android Version Compatibility
+
+Otter provides two builds tailored for different Android ecosystems:
+
+| Distribution Package | Supported Android Versions | Highlights |
+| :--- | :--- | :--- |
+| **Non-Play Store (GitHub Sideload / F-Droid)** | **Android 5.0 (API Level 21) up to Android 16+** | Maximum backwards compatibility for older devices, direct APK download, no Google services required. |
+| **Google Play Store Version** | **Android 7.0 (API Level 24) up to Android 16+** | Compliant with Google Play Automatic Protection policies and modern Android background service rules. |
+
+### Note on Google Play Protect (Sideloading APK)
+When manually installing the APK downloaded from GitHub Releases:
+- Google Play Protect may show a warning dialog ("Unrecognized app" or "Scan app").
+- This is standard Android security behavior for apps installed outside the Google Play Store.
+- You can safely choose to scan or tap **"Install without scanning" / "Install anyway"**. Otter is 100% open-source, contains zero ads, zero telemetry, and never transmits data to any external cloud server.
+
+---
+
+## How to Connect: 3 Connection Methods (+ Auto Mode)
+
+Otter supports three dedicated connection protocols with automatic network detection:
+
+### Method 1: USB Tethering (Easiest - No ADB or Developer Options Required)
+1. Connect your Android phone to your PC using a standard USB cable.
+2. On your phone, go to **Settings** -> **Portable Hotspot / Network & Internet** and turn ON **USB Tethering** (or tap the USB notification and select "USB Tethering").
+3. Launch Otter on your phone and tap **Start Stream**.
+4. In Otter Desktop on your PC, click **USB Tethering**. The client automatically detects the dynamic host gateway (e.g. `10.x.x.x` or `192.168.42.x`).
+5. Click **Connect & Start**.
+*No developer mode, no ADB authorization, and no special drivers needed!*
+
+### Method 2: ADB Tunnel (USB Cable with Zero-Latency Port Forwarding)
+1. On your phone, enable **Developer Options** (Settings -> About Phone -> tap *Build Number* 7 times).
+2. In **Developer Options**, turn ON **USB Debugging**.
+3. Connect your phone via USB cable and tap **Allow / Always allow from this computer** when prompted.
+4. In Otter Desktop on your PC, select **ADB Tunnel** (the IP address automatically sets to `127.0.0.1`).
+5. Click **Connect & Start**. Otter automatically handles port forwarding (`8089` and `8090`).
+*Recommended for streaming at 1080p 60 FPS while keeping the phone continuously charged.*
+
+### Method 3: Wi-Fi LAN IP (Wireless Mode)
+1. Ensure both your phone and PC are connected to the same Wi-Fi router or access point.
+2. Open Otter on your phone and note the local IP displayed at the bottom (e.g. `192.168.1.50`).
+3. Tap **Start Stream** on your phone.
+4. In Otter Desktop, select **Wi-Fi LAN IP**, verify the IP address (or click **Auto Detect IP**), and click **Connect & Start**.
+
+### Method 4: Auto (USB -> Wi-Fi)
+Selecting **Auto (USB -> Wi-Fi)** inspects active connections in priority order: it checks for an active USB tethering gateway or ADB device first, and automatically falls back to your local Wi-Fi network if no wired connection is detected.
+
+---
+
+## Desktop Launchers: Terminal vs. Silent Mode
+
+Otter Desktop provides two launcher options across all supported desktop operating systems:
+
+| Platform | Silent Launcher (Hidden Terminal) | Standard Launcher (With Console Window) |
+| :--- | :--- | :--- |
+| **Windows** | `run_windows_silent.vbs` | `run_windows.bat` |
+| **Linux** | `run_linux_silent.sh` | `run_linux.sh` |
+| **macOS** | `run_macos_silent.command` | `run_macos.command` / `run_macos.sh` |
+
+### Terminal Window Explanation: Why Does It Open and How to Hide It?
+- **Standard Launcher (`run_windows.bat`)**: Launches Otter with a visible command prompt / terminal window. This terminal runs the startup environment check and prints real-time connection logs, frame statistics, and error messages. **Do not be worried or scared by the black terminal window!** It is completely safe and normal for Python development applications.
+- **Silent Launcher (`run_windows_silent.vbs`)**: If you prefer a clean desktop experience without any console window appearing on your screen, simply double-click `run_windows_silent.vbs`. It runs Otter Desktop completely silently in the background while displaying only the graphical user interface.
+
+---
+
+## Python Dependency Setup & Manual Installation Commands
+
+Otter Desktop automatically creates an isolated virtual environment (`.venv`) and installs its requirements on first launch. If Python is not yet installed on your system:
+
+1. Visit the official Python download page: [https://www.python.org/downloads/](https://www.python.org/downloads/)
+2. Download the installer for your operating system (Python 3.9, 3.10, 3.11, or 3.12+).
+3. **CRITICAL STEP**: On the first installer screen, make sure to check the box:
+   **`[x] Add python.exe to PATH`** (or *Add Python to PATH*) before clicking "Install Now".
+4. Complete the installation.
+5. Double-click `run_windows_silent.vbs` or `run_windows.bat`. Otter will automatically configure all necessary libraries.
+
+> **INTERNET CONNECTION REQUIRED FOR SETUP**: An active internet connection is strictly required **only during the first launch or when running the pip installation commands below** so Python can download and install packages from PyPI. Once installed, Otter runs 100% locally and completely offline with zero internet required!
+
+### Manual Dependency Installation Commands (Copy & Paste by OS)
+
+If auto-installation fails due to firewall, proxy, or missing system packages, open your terminal / command prompt and run the commands for your operating system:
+
+#### Windows (Command Prompt or PowerShell)
+```cmd
+python -m pip install --upgrade pip
+pip install opencv-python numpy pyvirtualcam imageio-ffmpeg
+```
+*(If using the desktop client folder with requirements.txt: `pip install -r requirements.txt`)*
+
+#### Linux (Ubuntu / Debian / Linux Mint)
+```bash
+# 1. Install system prerequisites (Python, Tkinter GUI, and V4L2 virtual camera driver)
+sudo apt update && sudo apt install -y python3 python3-pip python3-tk python3-venv v4l2loopback-dkms
+
+# 2. Install Python packages
+python3 -m pip install --upgrade pip
+pip3 install opencv-python numpy pyvirtualcam imageio-ffmpeg
+```
+
+#### Linux (Fedora / RHEL)
+```bash
+sudo dnf install -y python3 python3-pip python3-tkinter v4l2loopback
+pip3 install opencv-python numpy pyvirtualcam imageio-ffmpeg
+```
+
+#### Linux (Arch Linux / Manjaro)
+```bash
+sudo pacman -S --needed python python-pip tk v4l2loopback-dkms
+pip install opencv-python numpy pyvirtualcam imageio-ffmpeg
+```
+
+#### macOS (Terminal with Homebrew)
+```bash
+# 1. Install Python and Tkinter via Homebrew
+brew install python python-tk
+
+# 2. Install Python packages
+pip3 install opencv-python numpy pyvirtualcam imageio-ffmpeg
+```
+
+*Note for all operating systems: If pip install fails, check your internet connection, disconnect active VPNs that might block pip/PyPI connections, and re-run the commands above.*
+
+---
+
+## Troubleshooting & Common Questions
+
+### 1. Connection Times Out or Cannot Find Camera IP
+- Verify that the IP address in the Desktop Client matches the IP displayed at the bottom of the Otter mobile app.
+- Click **Auto Detect IP** to refresh adapter addresses.
+- If using USB Tethering, ensure tethering is toggled ON in your phone settings before starting the stream.
+
+### 2. VPN Interference (LAN Connection Blocked)
+- Commercial VPN services (e.g. NordVPN, ExpressVPN, ProtonVPN, corporate VPNs) often redirect all network routing through encrypted virtual adapters and block local private subnet communication.
+- **Solution**: Temporarily pause or turn off your VPN, or enable **"Allow local network traffic / Split Tunneling"** in your VPN client settings so ports `8089` and `8090` can communicate locally.
+
+### 3. Windows Defender, Antivirus or Firewall Block
+- On first launch, Windows Defender or your firewall may show a prompt asking whether Python or Otter can access the network.
+- **Solution**: Check the box for **Private Networks** and click **Allow access**.
+- If previously blocked, open Windows Defender Firewall -> *Allow an app or feature through Windows Defender Firewall* -> ensure `python.exe` and `Otter` are allowed on Private networks, or open inbound TCP ports `8089` (video stream) and `8090` (control RPC).
+
+### 4. UI Responsiveness & Initial Stream Lag
+- **Notice**: During initial connection establishment, camera lens switching, or resolution changes, the desktop preview canvas or UI controls may experience a brief 1 to 2-second pause.
+- **Why this happens**: The hardware video encoder (`MediaCodec`) and PC decoder pipeline negotiate keyframes and buffer sizing.
+- **Resolution**: Do not worry on this part — this is normal during encoder handshaking and stabilizes into smooth 30/60 FPS streaming immediately after the first keyframe arrives.
+
 ---
 
 ## Key Features
 
-1. **Dual Connection Modes**:
-   - **USB Cable (ADB Auto-Tunnel)**: Recommended for zero-latency, rock-solid stability, and simultaneous phone charging. No root required.
-   - **Wi-Fi (LAN IP)**: Wireless freedom across 2.4GHz / 5GHz home networks.
-2. **Pro Optics & Remote Control**:
-   - Bidirectional real-time control between phone and PC.
-   - Front/Back lens switching with active lens indicator.
-   - Instant mirror flip/deflip.
-   - Digital zoom in/out up to sensor limits.
-   - Continuous Auto Focus (AF) and Manual Focus (MF) with distance stepping (Infinity to Macro).
-   - Real-time Exposure Value (EV) compensation.
-   - Multi-resolution switching on the fly (1080p, 720p, 480p, 360p).
-3. **Smart Lighting System**:
-   - **Hardware Flashlight / Torch**: Rear camera torch with low/high brightness levels (Android 13+ strength control, disabled automatically on unsupported lenses).
-   - **Front Screen Glow**: Front camera soft ring light with color temperatures (Warm, Daylight, Sunset, White) and automatic full-screen brightness boost.
-4. **Anti-Kill Background Lock**:
-   - Foreground service with `PARTIAL_WAKE_LOCK` for streaming with screen locked or turned off.
-   - Built-in guidance for aggressive OEM battery savers (Xiaomi/MIUI/HyperOS, Samsung One UI, ColorOS, OxygenOS, FuntouchOS).
-5. **Cross-Platform PC Controller**:
-   - Dark-mode GUI written with pure Python `tkinter` (zero external GUI library dependencies to launch).
-   - One-click launchers for Windows (`run_windows.bat`), macOS (`run_macos.sh`, `run_macos.command`), and Linux (`run_linux.sh`).
-   - Built-in dependency installer & uninstaller.
+1. **Dual-Execution Virtual Background Engine**:
+   - **PC GPU/CPU Offload (Recommended)**: Keeps your phone cool and preserves battery while your computer handles real-time background blur, custom images, and chroma keying.
+   - **Mobile Processing**: Standalone processing directly on your phone.
+   - **Background Modes**: Custom background image, light portrait bokeh blur, heavy privacy blur, and green screen chroma keying.
+
+2. **Smart Power & Battery Protection**:
+   - **Keep Screen On Toggle**: User-selectable switch to keep display awake or allow device auto-sleep.
+   - **Dim Display Mode**: Reduces screen backlight brightness by up to 70% during marathon calls to prevent heat buildup and OLED burn-in.
+   - **Foreground Service**: Prevents Android OEM battery managers from interrupting active streams.
+
+3. **Pro Manual Optics & Remote Control**:
+   - **Manual ISO**: Auto, 100, 200, 400, 800, 1600, 3200.
+   - **Manual Shutter Speed**: Auto, 1/2000s down to 1/15s.
+   - **Exposure Compensation (EV)**: Steppers and fine slider (-4.0 EV to +4.0 EV).
+   - **Focus Control**: Toggle continuous Auto Focus or use the precision Manual Focus slider (Macro to Infinity).
+   - **White Balance**: Auto, Daylight, Cloudy, Fluorescent, Incandescent, Twilight, Shade.
+   - **Creative Effects**: Color, B&W Mono, Negative, Sepia, Solarize, Posterize.
+
+4. **Multi-Lens Switching & 4K Ultra Photo**:
+   - Seamlessly toggle between Ultra-Wide, Main Wide, Telephoto, and Front selfie cameras.
+   - Capture uncompressed still photos at full sensor hardware resolution (e.g. 64MP+) without stopping the live stream.
+
+5. **Smart Lighting System**:
+   - **Hardware Torch**: Rear camera torch with Android 13+ multi-level strength control.
+   - **Front Screen Glow Ring**: Soft ring light with color temperatures (Warm Amber, Daylight, Sunset, White).
 
 ---
 
-## Quick Start & Installation
+## Permissions & Transparency
 
-### Step 1: Install Android App (`app-debug.apk`)
-1. Download `app-debug.apk` from the [Releases](https://github.com/saprecar/Otter/releases) page.
-2. On your Android phone, enable **Install unknown apps** for your file manager or browser.
-3. Install the APK and launch Otter.
-4. Grant the camera permission when prompted.
-
-### Step 2: Run Otter Desktop on PC
-
-#### Windows
-Double-click `run_windows.bat`.
-
-#### Linux
-Open terminal and run:
-```bash
-chmod +x run_linux.sh
-./run_linux.sh
-```
-
-#### macOS
-Double-click `run_macos.command` or run:
-```bash
-chmod +x run_macos.sh
-./run_macos.sh
-```
-
-*Note: The launcher automatically detects your Python environment and opens the Otter Controller.*
-
----
-
-## How to Connect: USB vs Wi-Fi
-
-### Method A: USB Cable (Recommended for 0-Latency)
-1. **Enable Developer Options**: Go to phone **Settings** -> **About Phone** -> tap **Build Number** 7 times.
-2. **Enable USB Debugging**: In **Settings** -> **Developer Options**, turn ON **USB Debugging**.
-3. **Plug in USB Cable**: Connect your phone to your PC with a USB data cable.
-4. **Authorize**: Check "Always allow from this computer" and tap **OK**.
-5. **Start Stream**:
-   - On Phone: Tap **Start**.
-   - On PC: Keep **USB (ADB Auto-Tunnel)** selected and click **Connect & Start**.
-
-### Method B: Wi-Fi (Wireless Mode)
-1. Ensure both phone and PC are connected to the same Wi-Fi network.
-2. Open Otter on your phone; note the IP address shown (e.g. `192.168.1.50`).
-3. Tap **Start** on your phone.
-4. On PC, select **Wi-Fi (LAN IP)**, enter the IP, and click **Connect & Start**.
-
----
-
-## Permissions & Full Transparency
-
-Otter requires minimal Android permissions, strictly for virtual webcam functionality:
+Otter requires minimal permissions strictly for virtual webcam functionality:
 
 | Permission | Purpose | Why It Is Needed |
 | :--- | :--- | :--- |
 | `android.permission.CAMERA` | Camera Access | Captures live video stream from front and rear sensors. |
 | `android.permission.INTERNET` | Local Network Socket | Streams H.264 video and control commands over local TCP ports (8089/8090). No data leaves your local network. |
 | `android.permission.ACCESS_WIFI_STATE` | Wi-Fi IP Query | Detects and displays your local IP address for easy Wi-Fi pairing. |
-| `android.permission.FOREGROUND_SERVICE` | Background Streaming | Keeps video encoder running when phone screen is turned off or locked. |
+| `android.permission.FOREGROUND_SERVICE` | Background Streaming | Keeps video encoder active when phone screen is turned off or locked. |
 | `android.permission.FOREGROUND_SERVICE_CAMERA` | Android 14+ Compliance | Required by Android 14+ for foreground camera streaming. |
-| `android.permission.WAKE_LOCK` | CPU Sleep Prevention | Prevents the operating system CPU from sleeping during a live meeting or stream. |
-| `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Battery Saver Exemption | Allows user to whitelist Otter from aggressive OEM task killers. |
+| `android.permission.WAKE_LOCK` | CPU Sleep Prevention | Prevents the CPU from sleeping during an active meeting or stream. |
 
 ### Privacy & Data Safety
 - **Zero Cloud Servers**: Video is transmitted strictly point-to-point (P2P) between your phone and your PC over local USB or local Wi-Fi.
@@ -117,22 +253,11 @@ Otter requires minimal Android permissions, strictly for virtual webcam function
 
 ---
 
-## Python Desktop Dependencies
-
-Otter Desktop utilizes standard, open-source Python packages:
-- `opencv-python` (BSD License): Video frame decoding and processing.
-- `numpy` (BSD License): Fast numerical array manipulation.
-- `pyvirtualcam` (MIT License): Cross-platform virtual camera loopback driver interface.
-
-### Automatic / Manual Management
-Install via controller UI tab **Dependencies & OEM Fix**, or via terminal:
-```bash
-pip install -r Dev/desktop/requirements.txt
-```
-To uninstall completely:
-```bash
-pip uninstall -y opencv-python numpy pyvirtualcam
-```
+## Detailed Documentation
+- [Master Guidebook (GUIDEBOOK.md)](GUIDEBOOK.md): Architecture, setup guides, Pro optics, virtual camera bridges, OEM anti-kill, and legal compliance.
+- [Policies and Agreements](Policies%20And%20Agreement/POLICIES_AND_AGREEMENT.md): Legal terms, privacy policy, user agreement, and license attribution.
+- [Google Play Data Safety](Policies%20And%20Agreement/GOOGLE_PLAY_DATA_SAFETY.md): Truthful data safety declarations.
+- [Store Listing & Metadata](STORE_LISTING.md): Multi-language store listings and visual asset specifications.
 
 ---
 
@@ -144,7 +269,7 @@ This software is distributed under the MIT License on an "AS IS" BASIS, WITHOUT 
 
 ---
 
-## License & Attribution
+## License & Mandatory Attribution
 
 ```text
 MIT License

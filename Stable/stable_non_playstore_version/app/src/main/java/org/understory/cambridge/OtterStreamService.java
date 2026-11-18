@@ -12,7 +12,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 
-// [AI-BLOCK: Foreground Service preventing Android OS / OEM killing during screen-off and background lock]
+// [AI-BLOCK: Foreground Service displaying live camera active notification & managing background lock]
 public class OtterStreamService extends Service {
 
     public static final String ACTION_START = "ACTION_START";
@@ -35,17 +35,41 @@ public class OtterStreamService extends Service {
             return START_NOT_STICKY;
         }
 
-        startForegroundService();
+        startOrUpdateNotification(intent);
         return START_STICKY;
     }
 
-    private void startForegroundService() {
-        acquireWakeLock();
+    private void startOrUpdateNotification(Intent intent) {
+        boolean enableWakeLock = true;
+        boolean isPaused = false;
+        String statusText = "Camera is actively streaming on port 8089";
+
+        if (intent != null) {
+            enableWakeLock = intent.getBooleanExtra("ENABLE_WAKELOCK", true);
+            isPaused = intent.getBooleanExtra("IS_PAUSED", false);
+            if (intent.hasExtra("STREAM_STATUS")) {
+                statusText = intent.getStringExtra("STREAM_STATUS");
+            }
+        }
+
+        if (enableWakeLock) {
+            acquireWakeLock();
+        } else {
+            releaseWakeLock();
+        }
 
         Intent notificationIntent = new Intent(this, MainActivity.class);
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this, 0, notificationIntent,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0
+        );
+
+        Intent stopIntent = new Intent(this, MainActivity.class);
+        stopIntent.setAction("ACTION_STOP_STREAM");
+        stopIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent stopPendingIntent = PendingIntent.getActivity(
+                this, 1, stopIntent,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0
         );
 
@@ -56,11 +80,17 @@ public class OtterStreamService extends Service {
             builder = new Notification.Builder(this);
         }
 
-        builder.setContentTitle("Otter Camera Active")
-                .setContentText("Streaming video in background and screen lock mode")
+        String title = isPaused ? "Otter Camera: Paused" : "Otter Camera: LIVE";
+        builder.setContentTitle(title)
+                .setContentText(statusText)
                 .setSmallIcon(R.drawable.ic_otter)
                 .setContentIntent(pendingIntent)
-                .setOngoing(true);
+                .setOngoing(!isPaused)
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop Stream", stopPendingIntent);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            builder.setSubText("Camera in use");
+        }
 
         Notification notification = builder.build();
 
@@ -104,10 +134,10 @@ public class OtterStreamService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Otter Camera Service",
+                    "Otter Camera Live Service",
                     NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("Maintains camera streaming and socket connection when screen is locked");
+            channel.setDescription("Notifies user that camera is actively streaming in background");
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
