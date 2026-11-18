@@ -22,7 +22,7 @@
 
 ### Data in Transit & Storage
 - **Is all user data encrypted in transit?**: **NO**
-- **Play Console Truthful Explanation**: Video frames travel strictly over local peer-to-peer physical USB cable (via ADB reverse tunnel) or local Wi-Fi router subnet using raw local TCP/IP sockets without an application-layer TLS certificate wrapper. Under Google Play Console's strict Data Safety definitions, local network socket communication without TLS must be answered as **No** for "encrypted in transit". No data is ever transmitted to external developer or cloud servers.
+- **Play Console Truthful Explanation**: Video frames travel strictly over local peer-to-peer physical USB cable (via ADB reverse tunnel or native USB tethering network interface) or local Wi-Fi router subnet using raw local TCP/IP sockets without an application-layer TLS certificate wrapper. Under Google Play Console's strict Data Safety definitions, local network socket communication without TLS must be answered as **No** for "encrypted in transit". No data is ever transmitted to external developer or cloud servers.
 - **Does your app provide a way for users to request data deletion?**: **Not Applicable / No data stored** (Because developer infrastructure retains zero user data, deletion on developer servers is not applicable. All local cache, settings, and captures are managed directly on the user's local device).
 
 ---
@@ -43,7 +43,7 @@
 ### C. Network State & Sockets (`INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`)
 - **Category**: Local Socket Communication
 - **Justification Statement**:
-  > "Used exclusively to bind and establish local peer-to-peer TCP/IP socket connections (Port 8089 for video and Port 8090/8081 for control RPC) between the Android device and the desktop client on the same local network subnet or via ADB reverse port forwarding. The app initiates zero connections to external public servers."
+  > "Used exclusively to bind and establish local peer-to-peer TCP/IP socket connections (Port 8089 for video and Port 8090 for control RPC) between the Android device and the desktop client on the same local network subnet, native USB tethering network interface, or via ADB reverse port forwarding. The app initiates zero connections to external public servers."
 
 ### D. Restricted Permissions Compliance (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`)
 - **Status**: **REMOVED from AndroidManifest.xml**

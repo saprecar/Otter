@@ -7,7 +7,7 @@
 **Governing Law**: Republic of India (Information Technology Act, 2000 & Indian Contract Act, 1872)  
 **Jurisdiction**: Competent Courts of Narmadapuram, Madhya Pradesh, India (PIN: 461001 / 461005)  
 **Effective Date**: November 17, 2026  
-**Last Updated**: November 17, 2026  
+**Last Updated**: November 19, 2026  
 
 ---
 
@@ -34,7 +34,7 @@ Otter operates strictly on a **100% Local Peer-to-Peer (P2P)** architecture:
    - The developer does NOT operate cloud servers, relay databases, or central tracking endpoints.
    - The developer does NOT collect, harvest, log, monitor, monetize, or sell any personal data, biometric records, camera feeds, photos, IP addresses, or device identifiers.
 2. **Local Frame Encoding & Socket Transmission**:
-   - Camera video is encoded in real-time directly on hardware (`MediaCodec` on Android) and transmitted directly to your paired computer via local USB reverse tethering (`adb reverse`) or a local Wi-Fi subnet socket (Port 8089 for video, Port 8090/8081 for control RPC).
+   - Camera video is encoded in real-time directly on hardware (`MediaCodec` on Android) and transmitted directly to your paired computer via local USB Tethering (native RNDIS/USB network interface), USB ADB port forwarding (`adb reverse`), or a local Wi-Fi subnet socket (Port 8089 for video stream, Port 8090 for bidirectional control RPC).
    - No audio, video, or still capture data is ever routed through external developer servers.
 3. **Data Deletion Inapplicability**:
    - Because the developer ingests and retains ZERO user data on developer infrastructure, user data deletion requests cannot be executed on developer servers, as no data exists to be deleted.
