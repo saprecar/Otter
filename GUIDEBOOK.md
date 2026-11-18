@@ -82,11 +82,13 @@ USB Tethering uses Android's native hardware USB network interface (RNDIS / CDC-
 
 1. **Plug in USB Cable**: Connect your phone to your PC with a standard USB data cable.
 2. **Turn on USB Tethering**:
-   - On Android: Open **Settings > Network & Internet > Hotspot & Tethering** and enable **USB Tethering**.
+   - On Android: Open **Settings > Network & Internet > Hotspot & Tethering** and enable **USB Tethering** (or tap the USB notification and select USB Tethering).
    - *Quick Shortcut*: Tap or long-press the network label in the Otter mobile app to open Tethering settings directly.
 3. **Connect Desktop**:
-   - In Otter Desktop Controller, select **(o) USB Tethering (No ADB)**.
-   - Click **Connect & Start** (or **Auto Detect IP**). The default gateway `192.168.42.129` connects immediately over the USB wire with 0 latency.
+   - In Otter Desktop Controller, select **(o) USB Tethering**.
+   - Otter automatically discovers the active USB tethering network adapter and dynamic default gateway (supports both dynamic Android Mainline subnets such as `10.x.x.x` and legacy static subnets like `192.168.42.129`).
+   - Click **Connect & Start**. The connection initializes immediately over the USB wire with sub-40ms latency.
+   - *Zero root, zero developer options, zero ADB commands, and zero driver setup required!*
 
 ### B. USB Cable Mode via ADB (Alternative Wired Port Forwarding)
 USB Cable streaming via ADB port forwarding:
@@ -293,8 +295,21 @@ Otter provides 8 optimized presets to configure camera parameters with a single 
 
 ### OBS Studio
 1. In OBS Studio, add a **Video Capture Device** source.
-2. Select **Unity Video Capture**.
+2. Select **Unity Video Capture** or **OBS Virtual Camera**.
 3. Set resolution to Match Output (`1920x1080` or `1280x720`).
+
+### Gaming Consoles & Handheld Devices
+- **Handheld PC Gaming Devices (Desktop OS)**:
+  - Supported directly in Desktop Mode.
+  - Run `./run_linux.sh` (or `run_windows.bat` on Windows-based handhelds) to initialize loopback video devices (`/dev/video*`). Select Otter directly in local broadcast or recording utilities.
+- **Dedicated Gaming Consoles (Proprietary OS via Hardware Capture Bridge)**:
+  - Gaming consoles enforce strict closed operating environments that only accept standard hardware USB Video Class (UVC) capture signals.
+  - Setup via generic hardware video capture card:
+    1. Connect phone to PC via Otter (USB Tethering, ADB Tunnel, or Wi-Fi).
+    2. Open your preferred preview or OBS Studio window showing the Otter Virtual Camera feed.
+    3. Connect an HDMI cable from your PC's video output to the HDMI input of a standard generic USB video capture card.
+    4. Connect the USB output of the capture card directly into your console's USB port.
+    5. The console detects the feed as a plug-and-play hardware camera for in-game streaming, overlays, and party chat.
 
 ---
 
@@ -339,6 +354,41 @@ Android device manufacturers employ aggressive background task killers. To ensur
 ### Video is lagging or dropping frames?
 - If using Wi-Fi, ensure your phone and PC are connected to a 5GHz Wi-Fi band, or switch to USB Cable Mode.
 - Lower target resolution from 4K/1080p to 720p in the Resolution selector.
+- *Notice on Initial Start*: During stream negotiation, a brief 1-2 second pause is normal while encoder keyframes synchronize.
+
+### Why does a black terminal window open on Windows?
+- Running `run_windows.bat` opens a command prompt window to show environment checks and real-time streaming logs. It is completely safe and normal.
+- If you prefer to hide the terminal window completely, launch Otter by double-clicking **`run_windows_silent.vbs`**.
+
+### VPN or Firewall blocking stream connection?
+- **VPN**: Commercial VPNs often route all traffic into virtual interfaces and block local LAN socket connections (ports `8089` and `8090`). Disable your VPN temporarily or allow local LAN bypass / split-tunneling.
+- **Firewall**: When prompted by Windows Defender Firewall, check the box for **Private Networks** and click **Allow access**. Inbound TCP ports `8089` (video) and `8090` (control) must be open.
+
+### Manual Dependency Installation Commands (All OS)
+*Note: An active internet connection is required only during package download/setup.*
+- **Windows**:
+  ```cmd
+  pip install opencv-python numpy pyvirtualcam imageio-ffmpeg
+  ```
+- **Linux (Ubuntu/Debian)**:
+  ```bash
+  sudo apt update && sudo apt install -y python3 python3-pip python3-tk python3-venv v4l2loopback-dkms
+  pip3 install opencv-python numpy pyvirtualcam imageio-ffmpeg
+  ```
+- **Linux (Fedora)**:
+  ```bash
+  sudo dnf install -y python3 python3-pip python3-tkinter v4l2loopback
+  pip3 install opencv-python numpy pyvirtualcam imageio-ffmpeg
+  ```
+- **macOS**:
+  ```bash
+  brew install python python-tk && pip3 install opencv-python numpy pyvirtualcam imageio-ffmpeg
+  ```
+
+### Google Play Protect Warning during APK Sideloading
+- When sideloading Otter APK outside the Play Store, Google Play Protect may show an "Unrecognized app" dialog.
+- Users can safely scan or select **"Install without scanning" / "Install anyway"**. Otter is 100% open-source and transmits zero data outside your local network.
+- **Android Compatibility**: Non-Play Store APK supports **Android 5.0 (API 21) up to Android 16+**; Play Store release supports **Android 7.0 (API 24) up to Android 16+**.
 
 ---
 
