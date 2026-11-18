@@ -100,6 +100,10 @@ Launchers automatically create an isolated Python virtual environment (`.venv`) 
 - **Firewall / Defender**: Allow Python/Otter on Private networks (TCP ports 8089 and 8090).
 - **UI Lag**: Brief 1-2 second pause during initial connection or lens switch is normal while encoder keyframes synchronize.
 
+### F. Gaming Consoles & Handheld Devices Setup
+- **Handheld PC Gaming Devices (Desktop OS)**: Directly supported in Desktop Mode using `run_linux.sh` or `run_windows.bat`.
+- **Dedicated Gaming Consoles (Proprietary Systems)**: Consoles require hardware USB Video Class (UVC) signals. Route your Otter video from PC into your console using a standard generic USB video capture card (PC HDMI Output -> Capture Card HDMI Input -> Capture Card USB plugged into Console).
+
 ---
 
 ## 3. Legal and Policy Disclaimers (Indian Law)

@@ -203,6 +203,26 @@ pip3 install opencv-python numpy pyvirtualcam imageio-ffmpeg
 
 ---
 
+## Gaming Consoles & Handheld Devices Setup
+
+### 1. Handheld PC Gaming Devices (Desktop OS)
+Handheld gaming systems running desktop operating systems (Linux or Windows) are natively supported:
+1. Switch to Desktop Mode on your handheld device.
+2. Run `run_linux.sh` (or `run_windows.bat` on Windows-based handhelds).
+3. The video feed binds to standard system video loopback devices and can be selected directly inside native recording or streaming software.
+
+### 2. Dedicated Gaming Consoles (Proprietary Systems via Capture Bridge)
+Dedicated gaming consoles use closed operating systems that strictly require hardware USB Video Class (UVC) inputs and do not permit third-party desktop background utilities. You can route Otter's high-definition video into your console using a generic hardware video capture bridge:
+
+1. **Stream to PC**: Connect your phone to your computer using Otter (USB Tethering, ADB Tunnel, or Wi-Fi).
+2. **Launch Preview**: Open your preferred broadcast utility or video preview window displaying the Otter Virtual Camera feed.
+3. **Connect Hardware Video Capture Card**:
+   - Connect an HDMI cable from your PC's secondary display output into the HDMI input of a standard generic USB video capture card.
+   - Plug the USB output of the capture card directly into any available USB port on your gaming console.
+4. **Console Camera Detection**: The console immediately detects the USB capture card as a standard hardware video camera device, enabling live camera feeds for console broadcasts, commentary, and in-game overlays.
+
+---
+
 ## Key Features
 
 1. **Dual-Execution Virtual Background Engine**:
