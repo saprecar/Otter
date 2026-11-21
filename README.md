@@ -2,7 +2,7 @@
   <img src="playstore_icon_512x512.png" alt="Otter Logo" width="120" height="120">
 </p>
 
-<h1 align="center">Otter - Virtual Webcam & Remote Control Suite</h1>
+<h1 align="center">Otter - Virtual Webcam & Remote Control Suite (Now Support Both Andorid and IOS)</h1>
 
 <p align="center">
   <img src="playstore_feature_graphic_1024x500.png" alt="Otter Feature Graphic" width="100%">
