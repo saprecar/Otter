@@ -80,9 +80,14 @@
         <button onclick="flipCamera()">Flip Camera</button>
         <button onclick="toggleTorch()">Torch / Glow</button>
       </div>
+      <div class="btn-grid" style="margin-top: 8px;">
+        <button id="btnWakeLock" onclick="toggleWakeLock()" style="grid-column: span 2; background: #1F6FEB; border-color: #388BFD; color: #fff;">
+          Keep Screen Awake: ON
+        </button>
+      </div>
 
-      <div class="warning-box">
-        Keep this browser tab open. Minimizing or locking your screen pauses the camera feed.
+      <div class="warning-box" id="wakeStatusBox">
+        Keep Screen Awake is active. Browser tab will not go to sleep while streaming.
       </div>
     </div>
   </div>
@@ -95,6 +100,8 @@
     let videoEl = document.getElementById('webcamPreview');
     let canvasEl = document.getElementById('frameCanvas');
     let ctx = canvasEl.getContext('2d');
+    let wakeLock = null;
+    let wakeLockEnabled = true;
 
     // Check Secure Context / MediaDevices availability
     window.addEventListener('DOMContentLoaded', () => {
@@ -105,7 +112,70 @@
         document.getElementById('secureContextNotice').style.display = 'block';
         document.getElementById('btnStart').disabled = true;
       }
+
+      // Request notification permission if supported
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
     });
+
+    async function requestWakeLock() {
+      if (!wakeLockEnabled) return;
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => {
+            if (isStreaming && wakeLockEnabled) {
+              requestWakeLock();
+            }
+          });
+          document.getElementById('wakeStatusBox').textContent = "Keep Screen Awake is active. Browser tab will not go to sleep while streaming.";
+          document.getElementById('btnWakeLock').textContent = "Keep Screen Awake: ON";
+          document.getElementById('btnWakeLock').style.background = "#1F6FEB";
+        }
+      } catch (err) {
+        console.warn("WakeLock error:", err);
+      }
+    }
+
+    function releaseWakeLock() {
+      if (wakeLock) {
+        try {
+          wakeLock.release();
+        } catch (e) {}
+        wakeLock = null;
+      }
+    }
+
+    function toggleWakeLock() {
+      wakeLockEnabled = !wakeLockEnabled;
+      const btn = document.getElementById('btnWakeLock');
+      const box = document.getElementById('wakeStatusBox');
+      if (wakeLockEnabled) {
+        btn.textContent = "Keep Screen Awake: ON";
+        btn.style.background = "#1F6FEB";
+        box.textContent = "Keep Screen Awake is active. Browser tab will not go to sleep while streaming.";
+        if (isStreaming) requestWakeLock();
+      } else {
+        btn.textContent = "Keep Screen Awake: OFF";
+        btn.style.background = "#21262D";
+        box.textContent = "Screen awake disabled. Device power saving may sleep screen if inactive.";
+        releaseWakeLock();
+      }
+    }
+
+    function showStreamingNotification() {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('Otter Camera Streaming', {
+            body: 'Connected: Mobile camera is actively broadcasting to your PC virtual webcam.',
+            icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="%233FB950" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>',
+            tag: 'otter-streaming-active',
+            silent: true
+          });
+        } catch (e) {}
+      }
+    }
 
     async function startCamera() {
       try {
@@ -141,6 +211,10 @@
 
         // Canvas stream transmitter
         sendInterval = setInterval(transmitFrame, 40); // ~25 FPS
+
+        // Acquire WakeLock and show notification
+        await requestWakeLock();
+        showStreamingNotification();
       } catch (err) {
         alert("Camera access denied or failed: " + err.message);
       }
@@ -166,6 +240,7 @@
 
     function stopCamera() {
       isStreaming = false;
+      releaseWakeLock();
       if (sendInterval) clearInterval(sendInterval);
       if (currentStream) {
         currentStream.getTracks().forEach(t => t.stop());
