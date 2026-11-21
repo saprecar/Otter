@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <b>Turn your Android phone into a studio-grade PC webcam over USB or Wi-Fi.</b><br>
-  1080p 60 FPS | Zero-Latency ADB Tunnel | USB Tethering | Pro Optics | AI Virtual Background | 100% Private P2P
+  <b>Turn your Android phone, tablet, iPhone, or iPad into a studio-grade PC webcam.</b><br>
+  Native Android App & Zero-Install Mobile Web Streamer | 1080p 60 FPS | Zero-Latency ADB Tunnel | USB Tethering | Pro Optics | AI Virtual Background | 100% Private P2P
 </p>
 
 <p align="center">
@@ -52,6 +52,120 @@ On your computer, the Otter Desktop receiver broadcasts the stream into an OS-le
 - **Discord**
 - **Google Meet, Zoom & Microsoft Teams**
 - **Web Browsers (Brave, Chrome, Firefox, Edge)**
+
+### Universal Web UI & Zero-Install Browser Streamer (iOS & Android)
+In addition to the native desktop application and Android app, Otter provides:
+1. **Universal Cross-Platform Web Controller**: Launch with `run_web_ui_windows.bat` on Windows or `./run_linux.sh` / `./run_macos.sh` on Linux/macOS. Controls camera optics, virtual backgrounds, and virtual webcam outputs directly from your browser.
+2. **Zero-Install Mobile Web Streamer**: Stream live camera video directly from:
+   - **Apple iOS & iPadOS**: iPhone and iPad running **Safari** (iOS 11+).
+   - **Android Phones & Tablets**: Google **Chrome**, **Brave**, **Firefox**, and **Samsung Internet**.
+   - Simply scan the QR code displayed on the desktop web dashboard to start streaming immediately with zero app installations or Apple developer accounts required!
+
+---
+
+## Device & Platform Compatibility
+
+Otter supports both native application installs and zero-install browser streaming across all major ecosystems:
+
+| Platform / Device | Mode | Supported Versions / Browsers | Highlights |
+| :--- | :--- | :--- | :--- |
+| **Android Phones & Tablets** | **Native App (APK)** | Android 5.0 (API 21) up to Android 16+ | Direct Camera2 hardware pipeline, 60 FPS, hardware H.264 encoder, manual pro optics. |
+| **Android Phones & Tablets** | **Web Streamer (Browser)** | Chrome, Brave, Firefox, Samsung Internet | Zero installation. Open streamer link or scan QR code. |
+| **Apple iPhone & iPad** | **Web Streamer (Browser)** | Safari (iOS / iPadOS 11+) | Zero app install, no App Store or Apple Developer account required. Strictly locked portrait layout. |
+| **Windows PC** | **Desktop Controller** | Windows 10, 11 (64-bit / 32-bit) | Web UI dashboard + DirectShow `Unity Video Capture` & `OBS Virtual Camera` drivers. |
+| **Linux PC** | **Desktop Controller** | Ubuntu, Debian, Fedora, Arch, Mint | Web UI dashboard + native `v4l2loopback` (`/dev/video*`) kernel webcam bridge. |
+| **macOS (Intel & Apple Silicon)** | **Desktop Controller** | macOS 12 Monterey up to macOS 15+ Sequoia | Web UI dashboard + CoreMediaIO DAL virtual camera bridge. |
+
+---
+
+## Mobile Browser Camera Permissions & Secure Context Guide (HTTP LAN)
+
+Modern mobile browsers implement strict security standards (W3C Secure Context) that guard `navigator.mediaDevices.getUserMedia` when accessing web pages over local HTTP Wi-Fi IP addresses (`http://192.168.x.x`):
+
+### 1. Google Chrome, Brave & Samsung Internet (Android)
+If the camera fails to activate with *"Cannot read properties of undefined (reading 'getUserMedia')"*, it is because Chrome/Brave blocks camera access on non-secure (plain HTTP) LAN IP addresses by default.
+
+**Easy 1-Minute Fix:**
+1. In your mobile browser's address bar, type:
+   - Chrome: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+   - Brave: `brave://flags/#unsafely-treat-insecure-origin-as-secure`
+2. Set the flag to **Enabled**.
+3. In the text box directly underneath, paste your desktop server origin (e.g. `http://192.168.1.50:8080`).
+4. Tap **Relaunch** at the bottom of your screen.
+5. Reload the Otter streamer page and tap **Allow** when prompted for camera access.
+
+> **Zero-Flag Alternative (USB ADB Reverse Tethering)**:
+> If connected via USB cable with USB Debugging enabled, run `adb reverse tcp:8080 tcp:8080` on your PC. Then on your phone, open `http://localhost:8080/streamer`. Chrome treats `localhost` as natively secure and enables camera access immediately without changing any flags!
+
+### 2. Apple Safari (iPhone & iPad)
+- Safari on iOS allows local camera access on local LAN IP addresses once you grant permission.
+- When prompted with *"streamer wants to use your camera"*, tap **Allow**.
+- Ensure Safari camera permissions are active in **Settings > Safari > Camera > Allow**.
+
+### 3. Mozilla Firefox (Android)
+- Firefox on Android prompts for camera access directly on local LAN addresses without requiring secure context flags. Tap **Allow** to stream.
+
+---
+
+## Connecting Otter to OBS Studio, Discord, Google Meet, Zoom & Teams
+
+When running the **Otter Universal Web UI Controller** (`run_web_ui_windows.bat` on Windows, `./run_linux.sh` on Linux, `./run_macos.sh` on macOS), video from either your Android phone or mobile web streamer is bridged into your streaming and conference applications:
+
+### 1. OBS Studio & Streamlabs
+You can bring Otter into OBS in **two different ways**:
+
+- **Method A: Direct Video Capture Device (Virtual Webcam)**
+  1. Open OBS Studio -> In the **Sources** box, click **+** -> select **Video Capture Device**.
+  2. Select your platform virtual camera device:
+     - **Windows**: Select `Unity Video Capture` or `OBS Virtual Camera`.
+     - **Linux**: Select `Otter Camera` or `/dev/video10` (via `v4l2loopback`).
+     - **macOS**: Select `OBS Virtual Camera` (via CoreMediaIO DAL plugin).
+  3. Click **OK**. The high-definition stream appears instantly just like a physical USB webcam.
+
+- **Method B: Browser Source (Zero Driver Installation)**
+  1. In OBS Studio, click **+** under **Sources** -> select **Browser**.
+  2. In the URL field, enter your active dynamic MJPEG URL:
+     ```text
+     http://localhost:<PORT>/mjpeg
+     ```
+     *(The exact port and full URL are displayed and copyable in 1 click directly inside the Otter Web UI header under "Live OBS / Browser Stream URL")*
+  3. Set Width to `1280` and Height to `720` (or `1920x1080` for 1080p).
+  4. Click **OK**. OBS streams the decoded video feed directly over your local loopback network with zero virtual camera drivers required!
+
+### 2. Discord
+1. Open Discord -> Go to **User Settings** (gear icon) -> **Voice & Video**.
+2. Scroll down to **Video Settings** -> **Camera**.
+3. In the dropdown, select:
+   - **Windows**: `Unity Video Capture` or `OBS Virtual Camera`.
+   - **Linux**: `Otter Camera` / `/dev/video10`.
+   - **macOS**: `OBS Virtual Camera`.
+4. Click **Test Video** to confirm your feed is live.
+
+### 3. Google Meet (Web Browser)
+1. Join or start a meeting on Google Meet in Brave, Chrome, Firefox, or Edge.
+2. Click the **More Options** (three vertical dots) at the bottom -> **Settings** -> **Video**.
+3. Under **Camera**, choose:
+   - `Unity Video Capture` or `OBS Virtual Camera` (Windows)
+   - `Otter Camera` (Linux)
+   - `OBS Virtual Camera` (macOS)
+4. Set Send resolution to **High definition (720p)** for crisp output.
+
+### 4. Zoom
+1. Open Zoom -> Click **Settings** (gear icon at top right) -> **Video**.
+2. In the **Camera** dropdown, select:
+   - `Unity Video Capture` or `OBS Virtual Camera` (Windows)
+   - `Otter Camera` (Linux)
+   - `OBS Virtual Camera` (macOS)
+3. Ensure **Original ratio** and **HD** are checked for full 16:9 widescreen fidelity.
+
+### 5. Microsoft Teams
+1. Open Microsoft Teams -> Click your profile/three dots menu -> **Settings** -> **Devices**.
+2. Scroll to the **Video settings** section.
+3. In the **Camera** dropdown, select:
+   - `Unity Video Capture` or `OBS Virtual Camera` (Windows)
+   - `Otter Camera` (Linux)
+   - `OBS Virtual Camera` (macOS)
+4. Confirm the preview is visible in the test viewport.
 
 > **ROOT NOT REQUIRED**: Otter does **NOT** require root access on your phone. It runs completely on standard, unrooted stock Android operating systems.
 

@@ -298,6 +298,21 @@ Otter provides 8 optimized presets to configure camera parameters with a single 
 2. Select **Unity Video Capture** or **OBS Virtual Camera**.
 3. Set resolution to Match Output (`1920x1080` or `1280x720`).
 
+### Universal Web UI Controller & Zero-Install Browser Streamer
+1. **Universal Cross-Platform Controller**: Run `run_web_ui_windows.bat` on Windows or `./run_linux.sh` / `./run_macos.sh` on Linux/macOS. Controls all camera optics, virtual backgrounds, and virtual webcam outputs from your web browser.
+2. **Zero-Install Mobile Browser Streamer (iOS & Android)**:
+   - **Supported Devices**:
+     - **Apple iOS / iPadOS**: iPhone and iPad running **Safari** (iOS 11+).
+     - **Android Devices**: Android Phones and Tablets running **Chrome**, **Brave**, **Samsung Internet**, or **Firefox**.
+   - Simply scan the QR code displayed on the desktop web dashboard to stream video straight into your PC virtual webcam with zero app installations.
+3. **Mobile Browser Camera Permissions & Secure Context Fix (HTTP LAN)**:
+   - **Chrome, Brave & Samsung Internet (Android)**: Chrome disables `navigator.mediaDevices` over plain HTTP LAN IPs.
+     - Open `chrome://flags/#unsafely-treat-insecure-origin-as-secure` (or `brave://flags/...`).
+     - Enable the flag, paste your PC IP server origin (e.g. `http://192.168.1.50:8080`), and tap **Relaunch**.
+     - Or connect over USB and run `adb reverse tcp:8080 tcp:8080` to open `http://localhost:8080/streamer` natively.
+   - **Apple Safari (iPhone / iPad)**: Prompts for camera permission on page load; tap **Allow**. If blocked, check iOS **Settings > Safari > Camera > Allow**.
+   - **Firefox (Android)**: Prompts for camera permissions automatically without requiring origin flags.
+
 ### Gaming Consoles & Handheld Devices
 - **Handheld PC Gaming Devices (Desktop OS)**:
   - Supported directly in Desktop Mode.

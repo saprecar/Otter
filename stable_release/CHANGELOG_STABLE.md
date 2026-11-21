@@ -254,6 +254,24 @@ All notable official stable releases of Otter Virtual Camera and Remote Controll
   - Verified pre-commit secret scan (`scan_secrets_and_diff.py` -> 0 secrets detected).
 
 
+## 2026-11-22 00:30:00 IST (UTC+05:30) - Version 1.5.0.0 Desktop (Universal Web UI Controller & Zero-Install Browser Streamer)
+- **Universal Cross-Platform Web UI Controller**:
+  - Addressed GUI rendering inconsistencies on Linux (Wayland/X11) and macOS (Aqua) by replacing mandatory Tkinter desktop GUI with a modern, responsive Web UI dashboard.
+  - Developed `otter_web_server.py`: embedded zero-dependency HTTP and MJPEG stream server serving the control interface and live video viewfinder.
+  - Implemented safe port auto-allocation: dynamically finds available ports starting from `8080`, strictly excluding privileged and system/OS-reserved ports (<1024, RPC, SMB, mDNS).
+  - Automated Brave Browser launch as primary default browser, with seamless fallback to system default.
+- **Zero-Install Mobile Browser Streamer (REQ-023)**:
+  - Enabled mobile Safari (iOS) and Chrome (Android) camera streaming to PC virtual webcams without installing any APKs or native apps.
+  - Added integrated scannable QR code generator and address copy button in `web_ui/index.html`.
+  - Resolved Chrome Android `getUserMedia` Insecure Context restriction: provides in-page diagnosis and instructions for `chrome://flags/#unsafely-treat-insecure-origin-as-secure` or ADB reverse.
+- **Dual-Input Virtual Camera Receiver**:
+  - Enhanced `cambridge_receiver.py` with `push_external_frame()` and `start_virtualcam_only()` to seamlessly multiplex between native Android H.264 streams and WebRTC/HTML5 browser streams.
+- **Launchers & Packaging**:
+  - Added `run_web_ui_windows.bat` for interactive console launching with error persistence.
+  - Packaged standalone release `Stable/Stable_Desktop_Client v1.5.0.0.zip` (585 KB).
+  - Verified cross-platform test suite (`test_cross_platform.py` -> 5/5 PASSED).
+  - Verified pre-commit secret scan (`scan_secrets_and_diff.py` -> 0 secrets detected).
+
 ## 2026-11-19 01:25:00 IST (UTC+05:30) - Version 1.4.0.0 (USB Tethering, Upright Orientation & Stream Sync)
 - **Version Bump**:
   - Incremented `versionCode` to `8` (even single-digit integer for stable release per Rule 13) and `versionName` to `1.4.0.0` across `Dev/android/app/build.gradle`, `Stable/stable_playstore_version/app/build.gradle`, and `Stable/stable_non_playstore_version/app/build.gradle`.

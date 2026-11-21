@@ -624,6 +624,97 @@ class CamBridgeReceiver:
                 cv2.destroyAllWindows()
             print("CamBridge Receiver terminated cleanly.")
 
+    def push_external_frame(self, frame):
+        """
+        [AI-BLOCK: Push an uncompressed BGR frame directly to active Virtual Cameras and UI monitor]
+        Enables REQ-023/REQ-024 browser WebRTC/HTML5 streamer to pipe video directly to virtual webcam drivers.
+        """
+        if frame is None or not CV2_AVAILABLE:
+            return
+
+        rot = self.rotation_angle % 360
+        if rot == 90:
+            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+        elif rot == 180:
+            frame = cv2.rotate(frame, cv2.ROTATE_180)
+        elif rot == 270:
+            frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+        if self.on_frame_cb:
+            try:
+                self.on_frame_cb(frame)
+            except Exception:
+                pass
+
+        fh, fw = frame.shape[:2]
+        if fw != self.width or fh != self.height:
+            if rot in (90, 270):
+                scale = min(self.width / fw, self.height / fh)
+                nw, nh = int(fw * scale), int(fh * scale)
+                resized = cv2.resize(frame, (nw, nh), interpolation=cv2.INTER_LINEAR)
+                canvas = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+                x_off = (self.width - nw) // 2
+                y_off = (self.height - nh) // 2
+                canvas[y_off:y_off + nh, x_off:x_off + nw] = resized
+                frame = canvas
+            else:
+                frame = cv2.resize(frame, (self.width, self.height))
+
+        frame = self.bg_processor.process(frame)
+
+        if hasattr(self, 'uc_bridge') and self.uc_bridge:
+            self.uc_bridge.send_frame(frame)
+        if hasattr(self, 'obs_bridge') and self.obs_bridge:
+            self.obs_bridge.send_frame(frame)
+        if hasattr(self, 'v4l2_bridge') and self.v4l2_bridge:
+            self.v4l2_bridge.send_frame(frame)
+        if hasattr(self, 'vcam') and self.vcam:
+            self.vcam.send(frame)
+            self.vcam.sleep_until_next_frame()
+
+    def start_virtualcam_only(self):
+        """Initialize virtual camera drivers without connecting to an Android TCP stream socket."""
+        self.running = True
+        self.uc_bridge = None
+        self.obs_bridge = None
+        self.v4l2_bridge = None
+        self.vcam = None
+
+        if sys.platform.startswith("win") and UNITY_CAPTURE_AVAILABLE:
+            try:
+                self.uc_bridge = UnityCaptureSharedMemory(cap_num=0)
+                if self.uc_bridge.connect():
+                    print("DirectShow Virtual Camera active: 'Unity Video Capture'")
+            except Exception as e:
+                print(f"DirectShow initialization notice: {e}")
+
+        if sys.platform.startswith("win") and OBS_VIRTUALCAM_AVAILABLE:
+            try:
+                self.obs_bridge = OBSVirtualCamBridge(width=self.width, height=self.height, fps=self.fps)
+                if self.obs_bridge.connect():
+                    print("OBS Virtual Camera Fallback active: 'OBS Virtual Camera'")
+            except Exception as e:
+                print(f"OBS Virtual Camera initialization notice: {e}")
+
+        elif sys.platform.startswith("linux") and LINUX_V4L2_AVAILABLE:
+            try:
+                self.v4l2_bridge = LinuxV4L2Bridge(width=self.width, height=self.height, fps=self.fps)
+                if self.v4l2_bridge.connect():
+                    print(f"Linux V4L2 Virtual Camera active on {self.v4l2_bridge.device_path}")
+            except Exception as e:
+                print(f"Linux V4L2 initialization notice: {e}")
+
+        if self.uc_bridge is None and self.obs_bridge is None and self.v4l2_bridge is None and VIRTUAL_CAM_AVAILABLE:
+            try:
+                self.vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR, device=self.camera_name)
+                print(f"Virtual Camera initialized: {self.vcam.device}")
+            except Exception as e:
+                try:
+                    self.vcam = pyvirtualcam.Camera(width=self.width, height=self.height, fps=self.fps, fmt=pyvirtualcam.PixelFormat.BGR)
+                    print(f"Virtual Camera initialized (default device): {self.vcam.device}")
+                except Exception as ex:
+                    print(f"Virtual camera initialization notice: {ex}.")
+
     def stop_receiver(self):
         self.running = False
         if hasattr(self, 'sock') and self.sock:

@@ -33,14 +33,9 @@ if [ -z "$PYTHON_SYS" ]; then
     exit 1
 fi
 
-# 2. Check for Tkinter GUI support
+# 2. Check for Tkinter GUI support (optional fallback)
 if ! "$PYTHON_SYS" -c "import tkinter" &>/dev/null; then
-    echo "[ERROR] Tkinter GUI module is not available in $PYTHON_SYS."
-    echo "If using Homebrew Python, install python-tk:"
-    echo "  brew install python-tk"
-    echo ""
-    read -p "Press Enter to exit..."
-    exit 1
+    echo "[INFO] Note: Tkinter GUI not available. Otter will run using the universal Web UI."
 fi
 
 # 3. Create & bootstrap isolated virtual environment (.venv)

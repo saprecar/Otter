@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Otter Mobile Streamer</title>
+  <style>
+    :root {
+      --bg: #0B0F14;
+      --card: #161B22;
+      --border: #30363D;
+      --accent: #1F6FEB;
+      --green: #238636;
+      --red: #DA3633;
+      --text: #C9D1D9;
+      --muted: #8B949E;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+    /* Strict Portrait Lock & Orientation Protection (REQ-023) */
+    .app-container { display: flex; flex-direction: column; flex: 1; padding: 12px; max-width: 480px; margin: 0 auto; width: 100%; }
+
+    header { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px 12px; }
+    .title { font-weight: 700; font-size: 1.1rem; color: #58A6FF; display: flex; align-items: center; gap: 8px; }
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; background: #21262D; color: var(--muted); border: 1px solid var(--border); }
+    .badge.live { background: rgba(35, 134, 54, 0.2); color: #3FB950; border-color: #3FB950; }
+
+    .video-wrapper { position: relative; width: 100%; aspect-ratio: 9/16; background: #000; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    canvas { display: none; }
+
+    .controls-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 12px; }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    
+    button { background: #21262D; border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: 0.15s ease; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    button:active { transform: scale(0.98); }
+    button.primary { background: var(--accent); border-color: #388BFD; color: #fff; }
+    button.success { background: var(--green); border-color: #3FB950; color: #fff; }
+    button.danger { background: var(--red); border-color: #F85149; color: #fff; }
+
+    .warning-box { margin-top: 10px; padding: 8px 10px; background: rgba(219, 171, 9, 0.1); border: 1px solid rgba(219, 171, 9, 0.3); border-radius: 6px; font-size: 0.75rem; color: #DBAB09; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <div class="title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Otter Streamer
+      </div>
+      <div id="statusBadge" class="badge">Offline</div>
+    </header>
+
+    <div class="video-wrapper">
+      <video id="webcamPreview" autoplay playsinline muted></video>
+      <canvas id="frameCanvas"></canvas>
+    </div>
+
+    <div class="controls-card">
+      <div id="secureContextNotice" style="display:none; margin-bottom: 10px; padding: 10px; background: rgba(218, 54, 51, 0.15); border: 1px solid #DA3633; border-radius: 6px; font-size: 0.8rem; line-height: 1.4;">
+        <div style="font-weight: 700; color: #F85149; margin-bottom: 4px;">Camera Blocked (Insecure Origin)</div>
+        Chrome on Android requires a secure origin for camera access (HTTPS or localhost).
+        <div style="margin-top: 6px; color: var(--text);">
+          <strong>Easy Fix for Chrome Android:</strong>
+          <ol style="margin-left: 18px; margin-top: 4px;">
+            <li>In Chrome address bar, open: <code style="background:#21262D; padding:2px 4px; border-radius:3px;">chrome://flags/#unsafely-treat-insecure-origin-as-secure</code></li>
+            <li>Enable the flag and add: <code id="flagOriginCode" style="background:#21262D; padding:2px 4px; border-radius:3px;"></code></li>
+            <li>Tap <strong>Relaunch</strong> at the bottom.</li>
+          </ol>
+          <div style="margin-top: 6px;"><em>Or use USB ADB / Reverse tethering which maps to <code style="background:#21262D; padding:2px 4px; border-radius:3px;">http://localhost:8080</code> (natively secure)!</em></div>
+        </div>
+      </div>
+
+      <div class="btn-grid">
+        <button id="btnStart" class="success" onclick="startCamera()">Start Stream</button>
+        <button id="btnStop" class="danger" onclick="stopCamera()" disabled>Stop</button>
+      </div>
+      <div class="btn-grid">
+        <button onclick="flipCamera()">Flip Camera</button>
+        <button onclick="toggleTorch()">Torch / Glow</button>
+      </div>
+
+      <div class="warning-box">
+        Keep this browser tab open. Minimizing or locking your screen pauses the camera feed.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentStream = null;
+    let facingMode = 'environment';
+    let isStreaming = false;
+    let sendInterval = null;
+    let videoEl = document.getElementById('webcamPreview');
+    let canvasEl = document.getElementById('frameCanvas');
+    let ctx = canvasEl.getContext('2d');
+
+    // Check Secure Context / MediaDevices availability
+    window.addEventListener('DOMContentLoaded', () => {
+      const origin = `${window.location.protocol}//${window.location.host}`;
+      document.getElementById('flagOriginCode').textContent = origin;
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        document.getElementById('secureContextNotice').style.display = 'block';
+        document.getElementById('btnStart').disabled = true;
+      }
+    });
+
+    async function startCamera() {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          document.getElementById('secureContextNotice').style.display = 'block';
+          alert("Chrome Android blocks camera over plain HTTP LAN IP. Please see the instructions box on screen to allow this IP or use localhost.");
+          return;
+        }
+
+        if (currentStream) {
+          currentStream.getTracks().forEach(t => t.stop());
+        }
+
+        const constraints = {
+          video: {
+            facingMode: { ideal: facingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 }
+          },
+          audio: false
+        };
+
+        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoEl.srcObject = currentStream;
+        await videoEl.play();
+
+        isStreaming = true;
+        document.getElementById('statusBadge').className = 'badge live';
+        document.getElementById('statusBadge').textContent = 'Live 30 FPS';
+        document.getElementById('btnStart').disabled = true;
+        document.getElementById('btnStop').disabled = false;
+
+        // Canvas stream transmitter
+        sendInterval = setInterval(transmitFrame, 40); // ~25 FPS
+      } catch (err) {
+        alert("Camera access denied or failed: " + err.message);
+      }
+    }
+
+    function transmitFrame() {
+      if (!isStreaming || !videoEl.videoWidth) return;
+
+      canvasEl.width = videoEl.videoWidth;
+      canvasEl.height = videoEl.videoHeight;
+      ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+
+      canvasEl.toBlob((blob) => {
+        if (blob && isStreaming) {
+          fetch('/api/push_frame', {
+            method: 'POST',
+            body: blob,
+            headers: { 'Content-Type': 'image/jpeg' }
+          }).catch(() => {});
+        }
+      }, 'image/jpeg', 0.65);
+    }
+
+    function stopCamera() {
+      isStreaming = false;
+      if (sendInterval) clearInterval(sendInterval);
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+        currentStream = null;
+      }
+      videoEl.srcObject = null;
+      document.getElementById('statusBadge').className = 'badge';
+      document.getElementById('statusBadge').textContent = 'Offline';
+      document.getElementById('btnStart').disabled = false;
+      document.getElementById('btnStop').disabled = true;
+    }
+
+    async function flipCamera() {
+      facingMode = (facingMode === 'user') ? 'environment' : 'user';
+      if (isStreaming) {
+        await startCamera();
+      }
+    }
+
+    async function toggleTorch() {
+      if (!currentStream) return;
+      const track = currentStream.getVideoTracks()[0];
+      try {
+        const capabilities = track.getCapabilities();
+        if (capabilities.torch) {
+          const currentTorch = track.getSettings().torch || false;
+          await track.applyConstraints({ advanced: [{ torch: !currentTorch }] });
+        } else {
+          alert("Torch not supported on this device/lens in browser.");
+        }
+      } catch (e) {
+        alert("Torch error: " + e.message);
+      }
+    }
+  </script>
+</body>
+</html>

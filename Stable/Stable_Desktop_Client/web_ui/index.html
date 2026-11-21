@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Otter - Virtual Webcam & Controller</title>
+  <style>
+    :root {
+      --bg-dark: #0B0F14;
+      --card-bg: #161B22;
+      --border-color: #30363D;
+      --text-main: #C9D1D9;
+      --text-muted: #8B949E;
+      --accent-blue: #1F6FEB;
+      --accent-hover: #388BFD;
+      --accent-green: #238636;
+      --accent-red: #DA3633;
+      --accent-gold: #DBAB09;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
+    
+    header { background: #010409; border-bottom: 1px solid var(--border-color); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; color: #58A6FF; }
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .badge-disconnected { background: #21262D; color: var(--text-muted); border: 1px solid var(--border-color); }
+    .badge-connecting { background: rgba(219, 171, 9, 0.2); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
+    .badge-streaming { background: rgba(35, 134, 54, 0.2); color: #3FB950; border: 1px solid #3FB950; }
+
+    main { display: grid; grid-template-columns: 1fr 380px; gap: 16px; padding: 16px; flex: 1; max-width: 1500px; margin: 0 auto; width: 100%; }
+    @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+
+    .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .card-title { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Viewfinder */
+    .viewfinder-card { display: flex; flex-direction: column; }
+    .viewfinder-container { position: relative; background: #000; border-radius: 6px; overflow: hidden; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); }
+    .viewfinder-container img { width: 100%; height: 100%; object-fit: contain; }
+    .viewfinder-placeholder { position: absolute; text-align: center; color: var(--text-muted); font-size: 0.95rem; }
+    .viewfinder-overlay { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; }
+
+    /* Controls Grid */
+    .btn-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    button { background: #21262D; color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.15s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    button:hover:not(:disabled) { background: #30363D; border-color: #8B949E; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button.btn-primary { background: var(--accent-blue); border-color: var(--accent-hover); color: #fff; }
+    button.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    button.btn-danger { background: var(--accent-red); border-color: #F85149; color: #fff; }
+    button.btn-success { background: var(--accent-green); border-color: #3FB950; color: #fff; }
+
+    /* Inputs */
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+    input, select { width: 100%; background: #0D1117; border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 10px; border-radius: 6px; font-size: 0.85rem; outline: none; }
+    input:focus, select:focus { border-color: var(--accent-blue); }
+
+    .segmented { display: flex; background: #0D1117; border: 1px solid var(--border-color); border-radius: 6px; padding: 2px; gap: 2px; }
+    .segmented button { flex: 1; border: none; background: transparent; padding: 6px; font-size: 0.8rem; }
+    .segmented button.active { background: var(--accent-blue); color: #fff; }
+
+    .qr-box { text-align: center; padding: 12px; background: #0D1117; border-radius: 6px; border: 1px solid var(--border-color); margin-top: 10px; }
+    .qr-box a { color: #58A6FF; word-break: break-all; font-size: 0.85rem; text-decoration: none; }
+
+    /* Log Console */
+    .log-box { background: #010409; border: 1px solid var(--border-color); border-radius: 6px; font-family: monospace; font-size: 0.75rem; color: #8B949E; height: 140px; overflow-y: auto; padding: 8px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Otter Web Controller
+    </div>
+    <div id="statusBadge" class="badge badge-disconnected">Disconnected</div>
+  </header>
+
+  <main>
+    <!-- Left Column: Video Preview and Live Camera Hardware Controls -->
+    <div>
+      <div class="card viewfinder-card">
+        <div class="card-title">
+          <span>Live Monitor & Virtual Webcam Stream</span>
+          <span id="streamFps" style="font-size: 0.75rem; color: #58A6FF;">0 FPS</span>
+        </div>
+        <div class="viewfinder-container">
+          <img id="mjpegView" src="/mjpeg" alt="Live Feed" style="display:none;" onerror="onMjpegError()">
+          <div id="viewfinderPlaceholder" class="viewfinder-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#30363D" stroke-width="1.5" style="margin-bottom:8px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <div>Camera Stream Offline</div>
+            <div style="font-size:0.8rem; margin-top:4px;">Connect Android App or Open Mobile Browser Streamer</div>
+          </div>
+          <div class="viewfinder-overlay">
+            <span id="activeSourceTag" class="badge badge-disconnected">No Active Source</span>
+          </div>
+        </div>
+        
+        <div style="margin-top: 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+          <div class="btn-row" style="margin-bottom: 0;">
+            <button id="btnConnect" class="btn-primary" onclick="startStream()">Connect & Start</button>
+            <button id="btnStop" class="btn-danger" onclick="stopStream()" disabled>Stop</button>
+            <button onclick="sendAction('switch_camera')">Flip Lens</button>
+            <button onclick="sendAction('toggle_torch')">Flashlight</button>
+            <button onclick="rotateCam()">Rotate 90°</button>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);" id="driverStatus">Virtual Cam: Initializing...</div>
+        </div>
+      </div>
+
+      <!-- Live Pro Camera Controls -->
+      <div class="card">
+        <div class="card-title">Manual Camera Controls (Synced with Phone)</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+          <div class="form-group">
+            <label>ISO Sensitivity</label>
+            <select id="isoSelect" onchange="sendParam('set_iso', {value: parseInt(this.value)})">
+              <option value="0">Auto ISO</option>
+              <option value="100">ISO 100</option>
+              <option value="200">ISO 200</option>
+              <option value="400">ISO 400</option>
+              <option value="800">ISO 800</option>
+              <option value="1600">ISO 1600</option>
+              <option value="3200">ISO 3200</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>White Balance (AWB)</label>
+            <select id="awbSelect" onchange="sendParam('set_awb', {mode: parseInt(this.value)})">
+              <option value="0">Auto White Balance</option>
+              <option value="1">Daylight (5500K)</option>
+              <option value="2">Cloudy (6500K)</option>
+              <option value="3">Fluorescent (4000K)</option>
+              <option value="4">Tungsten (2800K)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Color Effect</label>
+            <select id="fxSelect" onchange="sendParam('set_effect', {effect: parseInt(this.value)})">
+              <option value="0">Normal</option>
+              <option value="1">Mono / B&W</option>
+              <option value="2">Negative</option>
+              <option value="3">Sepia</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Zoom Level</label>
+            <div style="display:flex; gap:6px;">
+              <button style="flex:1;" onclick="sendAction('zoom_out')">-</button>
+              <button style="flex:1;" onclick="sendAction('zoom_in')">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Virtual Background Composite -->
+      <div class="card">
+        <div class="card-title">Virtual Background & Privacy (PC GPU/CPU)</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button onclick="setBg('off')">Off</button>
+          <button onclick="setBg('blur_light')">Light Blur</button>
+          <button onclick="setBg('blur_heavy')">Heavy Blur</button>
+          <button onclick="setBg('green_screen')">Chroma Green</button>
+          <button onclick="setBgPreset('modern_office')">Office</button>
+          <button onclick="setBgPreset('cozy_coffee_shop')">Coffee Shop</button>
+          <button onclick="setBgPreset('studio_bokeh')">Bokeh Studio</button>
+        </div>
+      </div>
+
+      <!-- App Integration Guide: OBS, Zoom, Meet, Teams, Discord -->
+      <div class="card">
+        <div class="card-title">Connect with OBS, Zoom, Teams, Meet & Discord</div>
+        <div style="background: #0D1117; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; font-size: 0.8rem; line-height: 1.5;">
+          <div style="margin-bottom: 10px;">
+            <strong style="color: #58A6FF;">1. Video Conference Apps (Zoom, Teams, Meet, Discord):</strong>
+            <p style="color: var(--text-muted); margin-top: 2px;">
+              These apps detect Otter directly through your operating system's native virtual camera driver. In their Settings &rarr; Video &rarr; Camera dropdown, select:
+            </p>
+            <div style="margin: 4px 0 0 10px; color: #fff;">
+              <div>&bull; Windows: <code id="winDriverName" style="background:#21262D; padding:2px 6px; border-radius:3px;">Unity Video Capture</code> or <code style="background:#21262D; padding:2px 6px; border-radius:3px;">OBS Virtual Camera</code></div>
+              <div>&bull; Linux: <code style="background:#21262D; padding:2px 6px; border-radius:3px;">Otter Camera</code> / <code style="background:#21262D; padding:2px 6px; border-radius:3px;">/dev/video10</code></div>
+              <div>&bull; macOS: <code style="background:#21262D; padding:2px 6px; border-radius:3px;">OBS Virtual Camera</code></div>
+            </div>
+          </div>
+
+          <div>
+            <strong style="color: #58A6FF;">2. OBS Studio / Streamlabs (Browser Source - Zero Drivers):</strong>
+            <p style="color: var(--text-muted); margin-top: 2px;">
+              To stream into OBS with zero virtual camera drivers, add a <strong>Browser Source</strong> and paste your active dynamic MJPEG stream URL:
+            </p>
+            <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px;">
+              <input type="text" id="obsMjpegUrl" readonly value="http://localhost:8080/mjpeg" style="font-family: monospace; font-size: 0.75rem; background:#010409; color:#58A6FF;">
+              <button onclick="copyObsUrl()" style="padding: 6px 12px; font-size: 0.75rem;">Copy URL</button>
+            </div>
+            <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">
+              Set Width: <code>1280</code> &bull; Height: <code>720</code> (or <code>1920x1080</code> for 1080p).
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Connection Settings & Browser Mobile Streamer URL -->
+    <div>
+      <div class="card">
+        <div class="card-title">Connection Mode</div>
+        <div class="segmented" id="modeSelector">
+          <button class="active" onclick="setMode('auto')">Auto</button>
+          <button onclick="setMode('usb')">USB (ADB)</button>
+          <button onclick="setMode('tether')">Tether</button>
+          <button onclick="setMode('wifi')">Wi-Fi</button>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <div class="form-group">
+            <label>Camera Device Target IP</label>
+            <div style="display:flex; gap:6px;">
+              <input type="text" id="targetIp" value="127.0.0.1">
+              <button onclick="detectIp()">Detect</button>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="form-group">
+              <label>Stream Port</label>
+              <input type="number" id="streamPort" value="8089">
+            </div>
+            <div class="form-group">
+              <label>Control Port</label>
+              <input type="number" id="ctrlPort" value="8090">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Browser Streamer Card (REQ-023) -->
+      <div class="card">
+        <div class="card-title">Zero-Install Mobile Web Streamer</div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+          Scan with your phone camera to stream directly from iPhone Safari or Android Chrome with zero app installation.
+        </p>
+        <div class="qr-box">
+          <div id="qrcode" style="display: flex; justify-content: center; margin: 10px 0; min-height: 140px; align-items: center;">
+            <img id="qrFallbackImg" src="" alt="Scan QR Code" style="width: 140px; height: 140px; border-radius: 4px; background: #fff; padding: 4px; display: none;">
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px;">Or open this address on your phone:</div>
+          <div style="display: flex; gap: 6px; align-items: center; justify-content: center;">
+            <a id="streamerLink" href="/streamer" target="_blank" style="font-weight: 600;">http://localhost:8080/streamer</a>
+            <button onclick="copyStreamerLink()" style="padding: 2px 8px; font-size: 0.7rem;">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Logcat & Status Overlay -->
+      <div class="card">
+        <div class="card-title">
+          <span>System Logcat</span>
+          <button onclick="clearLogs()" style="padding: 2px 8px; font-size: 0.7rem;">Clear</button>
+        </div>
+        <div id="logBox" class="log-box"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/qrcode.min.js"></script>
+  <script>
+    let currentMode = 'auto';
+    let isStreaming = false;
+    let rotationAngle = 0;
+    let qrInstance = null;
+    let lastRenderedUrl = '';
+
+    function copyStreamerLink() {
+      const link = document.getElementById('streamerLink').href;
+      navigator.clipboard.writeText(link).then(() => {
+        log(`Copied streamer link: ${link}`);
+      }).catch(() => {
+        log(`Streamer link: ${link}`);
+      });
+    }
+
+    function copyObsUrl() {
+      const url = document.getElementById('obsMjpegUrl').value;
+      navigator.clipboard.writeText(url).then(() => {
+        log(`Copied OBS Browser Source URL: ${url}`);
+      }).catch(() => {
+        log(`OBS URL: ${url}`);
+      });
+    }
+
+    function renderQRCode(url) {
+      if (lastRenderedUrl === url) return;
+      lastRenderedUrl = url;
+      const qrContainer = document.getElementById('qrcode');
+      const fallbackImg = document.getElementById('qrFallbackImg');
+
+      if (typeof QRCode !== 'undefined') {
+        qrContainer.innerHTML = '';
+        qrContainer.appendChild(fallbackImg);
+        fallbackImg.style.display = 'none';
+        try {
+          qrInstance = new QRCode(qrContainer, {
+            text: url,
+            width: 140,
+            height: 140,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+          });
+          return;
+        } catch (e) {
+          console.warn("Client QR error, using image fallback", e);
+        }
+      }
+      // Image fallback
+      fallbackImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(url)}`;
+      fallbackImg.style.display = 'block';
+    }
+
+    function log(msg) {
+      const box = document.getElementById('logBox');
+      const time = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.textContent = `[${time}] ${msg}`;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('logBox').innerHTML = '';
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('#modeSelector button').forEach(b => {
+        b.classList.toggle('active', b.textContent.toLowerCase().includes(mode));
+      });
+      if (mode === 'usb' || mode === 'auto') {
+        document.getElementById('targetIp').value = '127.0.0.1';
+      }
+      log(`Switched mode to: ${mode.toUpperCase()}`);
+    }
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        
+        // Update connection status
+        isStreaming = data.is_connected || data.web_streamer_active;
+        const badge = document.getElementById('statusBadge');
+        const mjpeg = document.getElementById('mjpegView');
+        const placeholder = document.getElementById('viewfinderPlaceholder');
+        const tag = document.getElementById('activeSourceTag');
+        const btnConnect = document.getElementById('btnConnect');
+        const btnStop = document.getElementById('btnStop');
+
+        if (isStreaming) {
+          badge.className = 'badge badge-streaming';
+          badge.textContent = 'Live Streaming';
+          btnConnect.disabled = true;
+          btnStop.disabled = false;
+          mjpeg.style.display = 'block';
+          placeholder.style.display = 'none';
+          tag.className = 'badge badge-streaming';
+          tag.textContent = data.source_type || 'Active Feed';
+        } else {
+          badge.className = 'badge badge-disconnected';
+          badge.textContent = 'Disconnected';
+          btnConnect.disabled = false;
+          btnStop.disabled = true;
+          mjpeg.style.display = 'none';
+          placeholder.style.display = 'block';
+          tag.className = 'badge badge-disconnected';
+          tag.textContent = 'No Active Source';
+        }
+
+        if (data.active_port) {
+          const streamerUrl = `${window.location.protocol}//${data.host_lan_ip || window.location.hostname}:${data.active_port}/streamer`;
+          document.getElementById('streamerLink').textContent = streamerUrl;
+          document.getElementById('streamerLink').href = streamerUrl;
+          renderQRCode(streamerUrl);
+
+          const obsUrl = `${window.location.protocol}//localhost:${data.active_port}/mjpeg`;
+          document.getElementById('obsMjpegUrl').value = obsUrl;
+        }
+
+        if (data.virtual_camera_name) {
+          document.getElementById('driverStatus').textContent = `Virtual Cam: ${data.virtual_camera_name}`;
+        }
+      } catch (e) {
+        console.error("Status fetch error", e);
+      }
+    }
+
+    async function startStream() {
+      const ip = document.getElementById('targetIp').value;
+      const sPort = parseInt(document.getElementById('streamPort').value);
+      const cPort = parseInt(document.getElementById('ctrlPort').value);
+      log(`Connecting to ${ip}:${sPort} (${currentMode.toUpperCase()})...`);
+      
+      const badge = document.getElementById('statusBadge');
+      badge.className = 'badge badge-connecting';
+      badge.textContent = 'Connecting...';
+
+      try {
+        const res = await fetch('/api/stream/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip, stream_port: sPort, control_port: cPort, mode: currentMode })
+        });
+        const data = await res.json();
+        log(data.message || 'Stream start signaled');
+      } catch (e) {
+        log(`Error starting stream: ${e}`);
+      }
+    }
+
+    async function stopStream() {
+      log('Stopping stream...');
+      try {
+        const res = await fetch('/api/stream/stop', { method: 'POST' });
+        const data = await res.json();
+        log(data.message || 'Stream stopped');
+      } catch (e) {
+        log(`Error stopping stream: ${e}`);
+      }
+    }
+
+    async function detectIp() {
+      log('Detecting camera IP address...');
+      try {
+        const res = await fetch(`/api/detect_ip?mode=${currentMode}`);
+        const data = await res.json();
+        if (data.ip) {
+          document.getElementById('targetIp').value = data.ip;
+          log(`Detected camera IP: ${data.ip} (${data.type})`);
+        } else {
+          log('No active camera IP detected automatically.');
+        }
+      } catch (e) {
+        log(`Detection error: ${e}`);
+      }
+    }
+
+    async function sendAction(action) {
+      log(`Action: ${action}`);
+      try {
+        await fetch('/api/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+      } catch (e) {
+        log(`Control error: ${e}`);
+      }
+    }
+
+    async function sendParam(action, params) {
+      log(`Setting ${action}: ${JSON.stringify(params)}`);
+      try {
+        await fetch('/api/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, ...params })
+        });
+      } catch (e) {
+        log(`Control error: ${e}`);
+      }
+    }
+
+    function rotateCam() {
+      rotationAngle = (rotationAngle + 90) % 360;
+      sendParam('set_rotation', { angle: rotationAngle });
+      log(`Rotated video to ${rotationAngle}°`);
+    }
+
+    async function setBg(mode) {
+      log(`Virtual Background set to: ${mode}`);
+      await fetch('/api/background', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode })
+      });
+    }
+
+    async function setBgPreset(presetName) {
+      log(`Applying wallpaper preset: ${presetName}`);
+      await fetch('/api/background', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'preset', preset: presetName })
+      });
+    }
+
+    function onMjpegError() {
+      if (isStreaming) {
+        setTimeout(() => {
+          document.getElementById('mjpegView').src = `/mjpeg?t=${Date.now()}`;
+        }, 1000);
+      }
+    }
+
+    // Auto-poll status
+    setInterval(fetchStatus, 1500);
+    fetchStatus();
+    log("Otter Web Controller initialized successfully.");
+  </script>
+</body>
+</html>

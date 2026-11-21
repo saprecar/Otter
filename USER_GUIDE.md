@@ -77,7 +77,36 @@
 
 ---
 
-## 2. Desktop Controller GUI (`otter_app.py`)
+## 2. Universal Web UI & Desktop Controller (Windows, Linux, macOS)
+
+Otter provides a zero-driver cross-platform Web UI dashboard (`otter_web_server.py`) that runs natively in your browser (Brave, Chrome, Firefox, Edge, Safari), completely bypassing Tkinter/X11/Wayland/Aqua rendering issues.
+
+### 1-Click Desktop Launchers
+- **Windows**: Double-click `run_web_ui_windows.bat` (Interactive console with live status and auto-browser launch).
+- **Linux**: Execute `./run_linux.sh` (or `./run_linux_silent.sh` for windowless background execution).
+- **macOS**: Double-click `run_macos.command` (or execute `./run_macos.sh`).
+
+### Connecting with Video Conference & Streaming Apps
+- **Zoom, Teams, Meet & Discord**: Select `Unity Video Capture` or `OBS Virtual Camera` on Windows, `Otter Camera` on Linux, and `OBS Virtual Camera` on macOS.
+- **OBS Studio (Zero Drivers via Browser Source)**: In OBS, add a **Browser Source** pointing to the dynamic loopback URL shown on the Web UI header: `http://localhost:<PORT>/mjpeg` (e.g. `http://localhost:8080/mjpeg`).
+
+### Zero-Install Mobile Web Streamer (Apple iOS & Android)
+Stream high-definition camera video directly from mobile browsers with zero app installation:
+- **Apple Devices**: iPhone and iPad running **Safari** (iOS 11+).
+- **Android Devices**: Phones and Tablets running **Chrome**, **Brave**, **Samsung Internet**, or **Firefox**.
+
+#### Pairing & Camera Permissions
+1. Scan the QR code displayed on the desktop Web UI (or type the local streamer address).
+2. **Apple Safari (iPhone/iPad)**: Tap **Allow** when prompted for camera access.
+3. **Android Chrome / Brave / Samsung Internet (Secure Context Fix)**:
+   - Modern Chromium browsers require a Secure Context for camera access over plain HTTP LAN IPs.
+   - If prompted with *"Cannot read properties of undefined (reading 'getUserMedia')"*, open `chrome://flags/#unsafely-treat-insecure-origin-as-secure` on your mobile browser, enable the flag, add your desktop IP origin (e.g. `http://192.168.1.50:8080`), and tap **Relaunch**.
+   - *Alternative*: Connect over USB with USB debugging and run `adb reverse tcp:8080 tcp:8080` to open `http://localhost:8080/streamer` natively.
+4. Tap **Start Stream** on your mobile screen. Video flows instantly into your PC's virtual camera and OBS!
+
+---
+
+## 3. Desktop Controller GUI (`otter_app.py` - Legacy Tkinter Fallback)
 
 ### Material Design 3 Control Panel Layout
 ```text

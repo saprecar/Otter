@@ -1,7 +1,7 @@
 # Current Work State
 
-- **Date & Time**: 2026-11-19 01:25:00 IST (UTC+05:30)
-- **Status**: v1.4.0.0 Stable Sync & Release Verification Complete
-- **Last Completed Task**: Fixed USB Tethering streaming with dynamic RNDIS gateway detection; resolved portrait/landscape camera sensor orientation mismatch on phone viewfinder and desktop client; implemented bidirectional start/stop RPC streaming synchronization; fixed disconnect state restoration with 2.5s socket read timeout; bumped versions across packages to v1.4.0.0 (versionCode 8); synced changes to Stable; packaged Stable Desktop Client v1.4.0.0 zip.
-- **Current File / Function**: `GITHUB_STATE.md`, `CHANGELOG_STABLE.md`
-- **Remaining Steps**: User verification of live streaming when phone is reconnected. All files verified and clean.
+- **Date & Time**: 2026-11-22 00:18:00 IST (UTC+05:30)
+- **Status**: Universal Web UI Controller, QR Code Integration & Chrome Android Insecure Origin Fix Complete (Tested)
+- **Last Completed Task**: Created `run_web_ui_windows.bat` for interactive console execution and error visibility; hardened `run_web_ui_windows.vbs` silent launcher; bundled offline and online QR code generation in `web_ui/index.html` with copy-address helper; resolved Chrome Android `getUserMedia is undefined` error caused by WebRTC Secure Context requirements by implementing in-page bypass diagnostics (`chrome://flags/#unsafely-treat-insecure-origin-as-secure`) and USB ADB localhost mapping.
+- **Current File / Function**: `run_web_ui_windows.bat`, `Dev/desktop/web_ui/streamer.html`
+- **Remaining Steps**: User verification of QR scan and browser streaming on Chrome Android.

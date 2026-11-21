@@ -30,16 +30,9 @@ if [ -z "$PYTHON_SYS" ]; then
     exit 1
 fi
 
-# 2. Check for Tkinter (GUI library)
+# 2. Check for Tkinter (optional fallback for legacy GUI)
 if ! "$PYTHON_SYS" -c "import tkinter" &>/dev/null; then
-    echo "[ERROR] Tkinter GUI module is not installed for $PYTHON_SYS."
-    echo "Please install the Tkinter package for your Linux distribution:"
-    echo "  Ubuntu/Debian/Mint: sudo apt install python3-tk"
-    echo "  Fedora/RHEL:        sudo dnf install python3-tkinter"
-    echo "  Arch Linux:         sudo pacman -S tk"
-    echo ""
-    read -p "Press Enter to exit..."
-    exit 1
+    echo "[INFO] Note: Tkinter GUI not installed. Otter will run using the universal Web UI."
 fi
 
 # 3. Create & bootstrap isolated virtual environment (.venv)

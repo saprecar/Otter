@@ -436,7 +436,28 @@
   - Built and verified Android APK (`assembleDebug` in 28s).
   - Verified cross-platform test suite (5/5 PASSED) and secret scan (0 detected).
   - Updated `Dev/docs/bugs/bugs.md` (BUG-017: Tested, BUG-018: Tested).
-## 2026-11-19 01:18:00 IST (UTC+05:30)
+## 2026-11-22 00:05:00 IST (UTC+05:30)
+## 2026-11-22 00:18:00 IST (UTC+05:30)
+- Added Windows Web UI Batch Launcher, QR Code Scanner & Android Chrome Camera Origin Fix (BUG-020):
+  - `run_web_ui_windows.bat`: Interactive console launcher with auto-detection of `.venv`, bundled Python, or system Python, keeping errors visible if initialization encounters an exception.
+  - `run_web_ui_windows.vbs`: Hardened silent background launcher pointing reliably to `otter_web_server.py`.
+  - QR Code Generation: Added client-side QR code generator (`qrcode.min.js`) and API image fallback in `index.html` with a one-click address copy button for instant phone scanning.
+  - Chrome Android `getUserMedia` Insecure Origin Fix: Chrome Android disables `navigator.mediaDevices` on plain HTTP non-localhost LAN IPs. Added automatic Secure Context detection in `streamer.html`, diagnostic banner, direct Chrome flag instructions (`chrome://flags/#unsafely-treat-insecure-origin-as-secure`), and recommendation for ADB reverse (`http://localhost:8080`).
+  - Passed `test_cross_platform.py` and `scan_secrets_and_diff.py` with 0 errors and 0 leaks.
+
+  - `run_web_ui_windows.vbs`: Launches the Otter Web UI controller in the background with zero command prompt / console windows using `pythonw.exe` and automatically opens Brave Browser.
+
+  - Addressed Tkinter canvas rendering failures on Linux (X11/Wayland) and macOS (Aqua) by replacing mandatory Tkinter GUI with a browser-based web dashboard.
+  - `otter_web_server.py`:
+    - Embedded zero-dependency HTTP & MJPEG live stream server.
+    - Integrated safe dynamic port allocator starting at 8080 with automatic fallback that strictly avoids system-reserved and privileged OS ports (<1024, RPC, SMB, mDNS, etc.).
+    - Automated detection and launch of Brave Browser as primary default browser per rule 4, falling back to system default.
+  - `web_ui/index.html`: Responsive Dark-themed PC control dashboard with live MJPEG viewfinder, bidirectional camera controls (ISO, AWB, FX, zoom, torch, flip lens, rotation), Virtual Background switcher, and one-click connection modes (Auto, USB ADB, USB Tethering, Wi-Fi LAN).
+  - `web_ui/streamer.html`: Zero-install mobile browser streamer (Safari/Chrome) adhering to REQ-023 strict portrait lock and orientation guard.
+  - `cambridge_receiver.py`: Added `push_external_frame()` and `start_virtualcam_only()` to allow browser streamer frames to flow seamlessly into native OS virtual webcam drivers (DirectShow UnityCapture / OBS on Windows, v4l2loopback on Linux, pyvirtualcam/OBS on macOS).
+  - `run_linux.sh` & `run_macos.sh`: Made Tkinter check optional; launches directly into universal Web UI if Tkinter is not installed.
+  - Passed `test_cross_platform.py` and `scan_secrets_and_diff.py` with zero errors and zero leaks.
+
 - Fixed Desktop Client Streaming RPC Sync & Phone Status Synchronization:
   - `cambridge_control.py`: Added explicit `start_stream()` and `stop_stream()` RPC methods sending `{"action": "start_stream"}` and `{"action": "stop_stream"}` over TCP port 8090, resolving an `AttributeError` that previously prevented desktop client button clicks from reaching the Android app.
   - `otter_app.py`:

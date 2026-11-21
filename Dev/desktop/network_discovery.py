@@ -211,6 +211,23 @@ def get_local_ip_subnets() -> List[str]:
         subnets.append("192.168.1")
     return list(dict.fromkeys(subnets))
 
+# [AI-BLOCK: Reserved System / OS Port Blacklist]
+# Exclude known privileged, core system, and high-conflict service ports even when currently unbound.
+SYSTEM_RESERVED_PORTS = {
+    # Well-known / privileged (1 - 1024)
+    *range(1, 1024),
+    # Common database / infrastructure ports
+    1433, 1434, 1521, 2049, 2375, 2376, 3000, 3306, 4000, 5000, 5432, 5900, 6379, 8000, 8443, 9000, 9200, 11211,
+    # Windows RPC, Apple, & Linux system / MDNS daemons
+    135, 137, 138, 139, 445, 500, 4500, 5353, 5355,
+}
+
+def is_system_reserved_port(port: int) -> bool:
+    """Check if port is within privileged range or matches well-known OS / system services."""
+    if port < 1024 or port in SYSTEM_RESERVED_PORTS:
+        return True
+    return False
+
 def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
     """Check if a specific port is already in use by a listening socket on the host."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -218,11 +235,11 @@ def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
         return s.connect_ex((host, port)) == 0
 
 def find_available_port(start_port: int = 8089, host: str = "127.0.0.1", max_port: int = 65535, exclude: List[int] = None) -> int:
-    """Find the next available bindable port starting from start_port."""
-    port = start_port
-    exclude = exclude or []
+    """Find the next available bindable port starting from start_port, skipping OS/system-reserved ports."""
+    port = max(1025, start_port)
+    exclude = set(exclude or [])
     while port <= max_port:
-        if port not in exclude:
+        if port not in exclude and not is_system_reserved_port(port):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 try:
                     s.bind((host, port))

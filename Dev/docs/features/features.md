@@ -41,3 +41,5 @@
 - FEAT-039 | 2026-11-18 | High-Res Quad-Bayer Sensor Detection & 60 FPS Suite | Ultra Photo high-res remosaic & pixel-binning auto-detection (64MP/50MP), dynamic 60 FPS HAL range adaptation, and Foreground Service toggle. Status: Tested
 - FEAT-040 | 2026-11-18 | Mode-Aware Auto Detect IP & Adapter Filtering | Auto Detect IP button resolves IP based on active mode: Tethering interface/gateway, ADB loopback availability, or filtered Wi-Fi LAN IP. Status: Tested
 - FEAT-041 | 2026-11-19 | Zero-Terminal Silent Launchers Suite | Windowless launchers for all OSes: run_windows_silent.vbs, run_linux_silent.sh, otter.desktop, and run_macos_silent.command. Status: Tested
+- FEAT-042 | 2026-11-19 | Browser WebRTC Streaming Bridge | In-client local web server allowing mobile Safari (iOS) and Chrome (Android) to stream camera frames to PC virtual webcam with zero app installation. Status: Planned
+- FEAT-043 | 2026-11-21 | Desktop Web UI Controller & Safe Port Allocator | Universal web dashboard serving PC controls, mjpeg/canvas monitor, mobile streamer, and system-reserved port avoiding scanner. Status: WIP

@@ -2374,6 +2374,32 @@ class OtterApp:
         self.root.destroy()
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = OtterApp(root)
-    root.mainloop()
+    import argparse
+    parser = argparse.ArgumentParser(description="Otter Desktop Controller")
+    parser.add_argument("--gui", action="store_true", help="Force legacy Tkinter desktop UI instead of universal Web UI")
+    parser.add_argument("--port", type=int, default=8080, help="Web UI controller port")
+    parser.add_argument("--no-browser", action="store_true", help="Do not auto-open browser")
+    args, unknown = parser.parse_known_args()
+
+    use_web_ui = True
+    if args.gui:
+        use_web_ui = False
+    elif sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
+        use_web_ui = True
+
+    if use_web_ui:
+        try:
+            import otter_web_server
+            otter_web_server.start_server(port=args.port, auto_open=not args.no_browser)
+        except Exception as e:
+            print(f"[Notice] Failed to start Otter Web Server ({e}). Falling back to Tkinter...")
+            try:
+                root = tk.Tk()
+                app = OtterApp(root)
+                root.mainloop()
+            except Exception as ex:
+                print(f"[Error] Failed to initialize Tkinter desktop GUI: {ex}")
+    else:
+        root = tk.Tk()
+        app = OtterApp(root)
+        root.mainloop()
