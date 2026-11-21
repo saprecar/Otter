@@ -184,7 +184,33 @@ Otter provides two builds tailored for different Android ecosystems:
 When manually installing the APK downloaded from GitHub Releases:
 - Google Play Protect may show a warning dialog ("Unrecognized app" or "Scan app").
 - This is standard Android security behavior for apps installed outside the Google Play Store.
-- You can safely choose to scan or tap **"Install without scanning" / "Install anyway"**. Otter is 100% open-source, contains zero ads, zero telemetry, and never transmits data to any external cloud server.
+- You can choose to scan the app first. Alternatively, you may select "Install without scanning" / "Install anyway" to proceed, but doing so means bypassing Google's security checks. Please understand the potential risks before proceeding. Installing the APK is entirely user own choice and responsibility.
+
+### Android APK Installation & Security
+
+Both **signed and unsigned APKs** may trigger Google Play Protect or Android security warnings when installing apps outside the Play Store.
+
+You can choose to scan the app first. Alternatively, you may select "Install without scanning" / "Install anyway" to proceed, but doing so means bypassing Google's security checks. Please understand the potential risks before proceeding. Installing the APK is entirely your own choice and responsibility.
+
+Otter is **open-source (MIT license)**, contains no ads or telemetry, and is designed to work without transmitting your data to external cloud servers.
+
+If you are unsure whether the APK is safe:
+
+- You can review the source code yourself.
+- You can ask a developer or someone knowledgeable in Android/Ios and other OS(operating system) etc security to inspect it.
+- If you are not a developer, you can copy the GitHub repository link below and share it with any AI assistant to help review the code for potential malware, suspicious behavior, vulnerabilities, unnecessary permissions, or privacy risks.
+
+**Repository:** https://github.com/saprecar/Otter
+
+**Suggested AI Security Review Prompt (Optional): You may use the prompt below to ask an AI to review the source code for potential security risks. However, AI reviews are not guaranteed to be accurate or complete and may miss vulnerabilities or produce false positives. The review is only a reference, not a security guarantee. Users are responsible for their own assessment and decision to install the application.**
+
+> Review this open-source Android application repository for security and privacy risks. Analyze the code for potential malware, suspicious behavior, data collection, telemetry, tracking, unexpected network communication, cloud data transmission, unsafe permissions, credential theft, hidden functionality, and other security vulnerabilities.
+>
+> Do not assume the application is safe simply because it is open-source. Trace the relevant code where possible, distinguish confirmed issues from potential risks, and provide evidence (file names and code references) for your findings. Also identify anything that appears safe and explain the limitations of your review.
+>
+> Repository: https://github.com/saprecar/Otter
+
+**Install only if you are comfortable with the risks and trust the source of the APK.**
 
 ---
 
